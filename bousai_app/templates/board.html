@@ -1,25 +1,425 @@
 {% extends "base.html" %}
 
-{% block title %}指示・発信ボード - 防災アプリ{% endblock %}
+{% block title %}ホーム - 防災アプリ{% endblock %}
 
 {% block content %}
-<h2>発信ボード</h2>
-<p>住民向けの発信を登録・確認できます。</p>
+<style>
+  .board-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 4px 0 32px;
+    color: #1f2937;
+  }
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .title-wrap h2 {
+    margin: 0;
+    font-size: 2rem;
+    color: #123b5c;
+  }
+  .subtitle {
+    margin: 0;
+    color: #51677a;
+    font-size: 0.96rem;
+  }
+  .filter-box {
+    background: white;
+    border: 1px solid #dfe7ef;
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .filter-box label {
+    font-weight: 600;
+    color: #334155;
+  }
+  .filter-box select {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-width: 180px;
+    font-size: 0.96rem;
+    background: #fff;
+  }
+  .filter-box button {
+    background: #0d5ea8;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .list-grid {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+  }
+  .notice-card {
+    border-radius: 16px;
+    border: 1px solid #dfe7ef;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
+  }
+  .notice-card.urgent {
+    border-left: 8px solid #dc2626;
+    background: linear-gradient(180deg, #fff5f5 0%, #ffffff 20%);
+  }
+  .notice-card.warning {
+    border-left: 8px solid #d97706;
+    background: linear-gradient(180deg, #fffaf0 0%, #ffffff 20%);
+  }
+  .notice-card.info {
+    border-left: 8px solid #2563eb;
+    background: linear-gradient(180deg, #eff6ff 0%, #ffffff 20%);
+  }
+  .notice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px 8px;
+    flex-wrap: wrap;
+  }
+  .importance-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+  }
+  .importance-urgent {
+    background: rgba(220, 38, 38, 0.12);
+    color: #b91c1c;
+  }
+  .importance-warning {
+    background: rgba(217, 119, 6, 0.12);
+    color: #b45309;
+  }
+  .importance-info {
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+  }
+  .notice-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #475569;
+    padding: 0 18px 8px;
+  }
+  .chip {
+    background: #edf2f7;
+    color: #334155;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-weight: 600;
+  }
+  .notice-body {
+    padding: 0 18px 16px;
+  }
+  .notice-body h3 {
+    margin: 0 0 8px;
+    font-size: 1.2rem;
+    color: #0f172a;
+  }
+  .notice-body p {
+    margin: 6px 0;
+    color: #334155;
+    line-height: 1.7;
+  }
+  .action-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .map-link {
+    display: inline-block;
+    background: #0f766e;
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    padding: 9px 14px;
+    font-weight: 600;
+  }
+  .admin-section {
+    margin-top: 32px;
+    background: #fff;
+    border: 1px solid #dfe7ef;
+    border-radius: 18px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    padding: 20px;
+  }
+  .admin-section h3 {
+    margin: 0 0 18px;
+    color: #123b5c;
+    font-size: 1.5rem;
+  }
+  .admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 20px;
+  }
+  .admin-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px;
+  }
+  .admin-card h4 {
+    margin: 0 0 12px;
+    font-size: 1.1rem;
+    color: #0f172a;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .form-group label {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #334155;
+  }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.96rem;
+    background: white;
+  }
+  .form-group textarea {
+    min-height: 90px;
+    resize: vertical;
+  }
+  .radio-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+  }
+  .radio-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #334155;
+    font-size: 0.94rem;
+  }
+  .error-box {
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-top: 12px;
+    font-size: 0.92rem;
+    display: none;
+  }
+  .submit-btn {
+    margin-top: 8px;
+    background: #1d4ed8;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  @media (max-width: 640px) {
+    .topbar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .title-wrap h2 {
+      font-size: 1.6rem;
+    }
+    .notice-header, .action-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
 
-<!-- 発信一覧 -->
-<h3>発信一覧</h3>
-{% if instructions %}
-<table border="1" cellpadding="5">
-  <tr>
-    <th>内容</th>
-  </tr>
-  {% for inst in instructions %}
-  <tr>
-    <td>{{ inst.content }}{% if inst.shelter %}（避難先: {{ inst.shelter }}）{% endif %}</td>
-  </tr>
-  {% endfor %}
-</table>
-{% else %}
-<p>登録されている指示はありません。</p>
-{% endif %}
+<div class="board-page">
+  {% if success_message %}
+    <div style="margin-bottom: 16px; padding: 12px 14px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 10px; font-weight: 600;">
+      {{ success_message }}
+    </div>
+  {% endif %}
+
+  {% if error_message %}
+    <div style="margin-bottom: 16px; padding: 12px 14px; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 10px; font-weight: 600;">
+      {{ error_message }}
+    </div>
+  {% endif %}
+
+  <div class="topbar">
+    <div class="title-wrap">
+      <h2>ホーム（発信ボード）</h2>
+      <p class="subtitle">住民向けの緊急情報と避難指示を確認できます。</p>
+    </div>
+  </div>
+
+  <div class="filter-box">
+    <label for="districtFilter">地区フィルター</label>
+    <form method="get" action="/board" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <select id="districtFilter" name="district">
+        <option value="">全地区</option>
+        {% for district in districts %}
+        <option value="{{ district }}" {% if district == district_filter %}selected{% endif %}>{{ district }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">絞り込み</button>
+    </form>
+  </div>
+
+  <div class="list-grid">
+    {% if instructions %}
+      {% for inst in instructions %}
+        {% set importance = (inst.importance or '情報')|string %}
+        {% set importance_class = 'info' %}
+        {% if importance == '緊急' %}{% set importance_class = 'urgent' %}
+        {% elif importance == '警告' %}{% set importance_class = 'warning' %}
+        {% endif %}
+        {% set shelter_name = inst.shelter or '未指定' %}
+        {% set district_name = inst.district or '全域' %}
+        {% set time_value = inst.time or inst.created_at or '未設定' %}
+
+        <article class="notice-card {{ importance_class }}">
+          <div class="notice-header">
+            <span class="importance-badge importance-{{ importance_class }}">{{ importance }}</span>
+            <span class="chip">{{ district_name }}</span>
+          </div>
+
+          <div class="notice-meta">
+            <span>発信時刻: {{ time_value }}</span>
+            <span>対象地区: {{ district_name }}</span>
+          </div>
+
+          <div class="notice-body">
+            <h3>指示内容</h3>
+            <p>{{ inst.content }}</p>
+
+            {% if inst.shelter %}
+              <p><strong>避難先:</strong> {{ inst.shelter }}</p>
+            {% endif %}
+
+            <div class="action-row">
+              <div>
+                {% if inst.shelter %}
+                  <a class="map-link" href="https://www.google.com/maps/search/?api=1&query={{ inst.shelter | urlencode }}" target="_blank" rel="noopener noreferrer">避難所マップを開く</a>
+                {% else %}
+                  <span class="chip">避難先未設定</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    {% else %}
+      <div class="notice-card info">
+        <div class="notice-body">
+          <h3>現在の発信はありません</h3>
+          <p>登録されている住民向けの指示はありません。</p>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if is_admin %}
+  <section class="admin-section">
+    <h3>管理者用フォーム</h3>
+
+    <div class="admin-grid">
+      <div class="admin-card">
+        <h4>指示登録</h4>
+        <form method="post" action="/board">
+          <div class="form-group">
+            <label for="instruction-content">指示内容</label>
+            <textarea id="instruction-content" name="instruction-content" placeholder="例: 〇〇地区で土砂災害警戒が発表されています。"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>重要度</label>
+            <div class="radio-row">
+              <label class="radio-option"><input type="radio" name="importance" value="緊急"> 緊急</label>
+              <label class="radio-option"><input type="radio" name="importance" value="警告"> 警告</label>
+              <label class="radio-option"><input type="radio" name="importance" value="情報" checked> 情報</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="instruction-time">発信時間</label>
+            <input id="instruction-time" type="time" name="instruction-time">
+          </div>
+
+          <div class="form-group">
+            <label for="instruction-district">対象地区</label>
+            <select id="instruction-district" name="instruction-district">
+              <option value="">選択してください</option>
+              <option value="青森市">青森市</option>
+              <option value="中央地区">中央地区</option>
+              <option value="西地区">西地区</option>
+              <option value="東地区">東地区</option>
+            </select>
+          </div>
+
+          <button class="submit-btn" type="submit">指示を登録</button>
+          <div class="error-box" aria-live="polite">入力漏れがあります。</div>
+        </form>
+      </div>
+
+      <div class="admin-card">
+        <h4>避難所状況登録</h4>
+        <form method="post" action="/board">
+          <div class="form-group">
+            <label for="shelter-name">避難所名</label>
+            <input id="shelter-name" type="text" name="shelter-name" placeholder="例: 片瀬小学校">
+          </div>
+
+          <div class="form-group">
+            <label for="capacity">残りの収容可能人数</label>
+            <input id="capacity" type="number" name="capacity" min="0" placeholder="例: 80">
+          </div>
+
+          <div class="form-group">
+            <label for="supply-status">物資の状況</label>
+            <textarea id="supply-status" name="supply-status" placeholder="例: 飲料水は十分、毛布は残り少なめ。"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="status-note">状況メモ</label>
+            <textarea id="status-note" name="status-note" placeholder="例: 玄関前で受付を行っています。"></textarea>
+          </div>
+
+          <button class="submit-btn" type="submit">避難所状況を登録</button>
+          <div class="error-box" aria-live="polite">入力漏れがあります。</div>
+        </form>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+</div>
 {% endblock %}

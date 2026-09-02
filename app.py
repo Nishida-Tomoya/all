@@ -324,12 +324,117 @@ def all_shelters():
     return render_template('search_results.html', results=shelters)
 
 
-# 指示ボード：住民向けの指示を一覧で確認する
-@app.route('/board')
-@login_required
+# 指示ボード：市民はログインなしで閲覧でき、管理者のみ登録フォームを表示する
+@app.route('/board', methods=['GET', 'POST'])
 def board():
-    resident_instructions = [i for i in instructions if i.get('target') == '住民']
-    return render_template('board.html', instructions=resident_instructions)
+    selected_district = request.args.get('district', '').strip()
+    is_admin = bool(session.get('logged_in'))
+
+    if request.method == 'POST':
+        if 'instruction-content' in request.form:
+            instruction_content = request.form.get('instruction-content', '').strip()
+            importance = request.form.get('importance', '').strip()
+            instruction_time = request.form.get('instruction-time', '').strip()
+            district = request.form.get('instruction-district', '').strip()
+
+            if not instruction_content or not importance or not district:
+                return render_template(
+                    'board.html',
+                    instructions=[i for i in instructions if i.get('target') == '住民'],
+                    districts=sorted({str(i.get('district') or '全域') for i in instructions if i.get('target') == '住民'}),
+                    district_filter=selected_district,
+                    is_admin=is_admin,
+                    error_message='指示内容・重要度・対象地区を入力してください。'
+                )
+
+            new_instruction = {
+                'id': max((i.get('id', 0) for i in instructions), default=0) + 1,
+                'target': '住民',
+                'content': instruction_content,
+                'importance': importance,
+                'district': district,
+                'shelter': '',
+                'time': instruction_time or datetime.now(JST).strftime('%H:%M'),
+                'created_at': get_japan_time(),
+                'updated_at': get_japan_time(),
+            }
+            instructions.append(new_instruction)
+            try:
+                with open(INSTRUCTIONS_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(instructions, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+
+            return render_template(
+                'board.html',
+                instructions=[i for i in instructions if i.get('target') == '住民'],
+                districts=sorted({str(i.get('district') or '全域') for i in instructions if i.get('target') == '住民'}),
+                district_filter=selected_district,
+                is_admin=is_admin,
+                success_message='指示を登録しました。'
+            )
+
+        if 'shelter-name' in request.form:
+            shelter_name = request.form.get('shelter-name', '').strip()
+            capacity = request.form.get('capacity', '').strip()
+            supply_status = request.form.get('supply-status', '').strip()
+            status_note = request.form.get('status-note', '').strip()
+
+            if not shelter_name:
+                return render_template(
+                    'board.html',
+                    instructions=[i for i in instructions if i.get('target') == '住民'],
+                    districts=sorted({str(i.get('district') or '全域') for i in instructions if i.get('target') == '住民'}),
+                    district_filter=selected_district,
+                    is_admin=is_admin,
+                    error_message='避難所名を入力してください。'
+                )
+
+            matched = False
+            for shelter in shelters:
+                if str(shelter.get('name', '')).strip() == shelter_name:
+                    shelter['capacity'] = int(capacity) if capacity else shelter.get('capacity')
+                    shelter['supply_status'] = supply_status or shelter.get('supply_status', '')
+                    shelter['status_note'] = status_note or shelter.get('status_note', '')
+                    matched = True
+                    break
+
+            if not matched:
+                shelters.append({
+                    'id': max((s.get('id', 0) for s in shelters), default=0) + 1,
+                    'name': shelter_name,
+                    'capacity': int(capacity) if capacity else 0,
+                    'supply_status': supply_status,
+                    'status_note': status_note,
+                })
+
+            try:
+                with open(DATA_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(shelters, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+
+            return render_template(
+                'board.html',
+                instructions=[i for i in instructions if i.get('target') == '住民'],
+                districts=sorted({str(i.get('district') or '全域') for i in instructions if i.get('target') == '住民'}),
+                district_filter=selected_district,
+                is_admin=is_admin,
+                success_message='避難所状況を登録しました。'
+            )
+
+    resident_instructions = [
+        i for i in instructions
+        if i.get('target') == '住民' and (not selected_district or i.get('district') == selected_district)
+    ]
+    districts = sorted({str(i.get('district') or '全域') for i in instructions if i.get('target') == '住民'})
+    return render_template(
+        'board.html',
+        instructions=resident_instructions,
+        districts=districts,
+        district_filter=selected_district,
+        is_admin=is_admin
+    )
 
 # 検索結果ページ：templates/search_results.html を返す
 @app.route('/search_results')

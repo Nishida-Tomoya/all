@@ -34,5 +34,16 @@
     "status": "完了",
     "created_at": "2026年07月14日 18:22",
     "updated_at": "2026年07月14日 18:22"
+  },
+  {
+    "id": 5,
+    "target": "住民",
+    "content": "Aトンネルが崩壊しています。",
+    "importance": "緊急",
+    "district": "青森市",
+    "shelter": "",
+    "time": "16:51",
+    "created_at": "2026年09月02日 16:51",
+    "updated_at": "2026年09月02日 16:51"
   }
 ]

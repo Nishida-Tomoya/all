@@ -14,5 +14,12 @@
   {
     "id": 6,
     "name": "まさき小学校"
+  },
+  {
+    "id": 7,
+    "name": "テスト避難所",
+    "capacity": 50,
+    "supply_status": "水分補給可能",
+    "status_note": "受付中"
   }
 ]
