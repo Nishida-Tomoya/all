@@ -4,30 +4,265 @@
   <meta charset="utf-8">
   <title>{% block title %}防災アプリ{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --header-blue: #0a4a7a;
+      --header-blue-deep: #083d69;
+      --page-gray: #eef1f4;
+      --card-gray: #f4f6f7;
+      --panel-border: #dfe6eb;
+      --text-main: #1d2d3a;
+      --text-soft: #5b6f7c;
+      --blue-accent: #1d7fd3;
+      --green-success: #2bb573;
+      --shadow-soft: 0 4px 12px rgba(21, 47, 66, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: "Yu Gothic", "Hiragino Sans", "Meiryo", sans-serif;
+      background: var(--page-gray);
+      color: var(--text-main);
+    }
+
+    body {
+      min-height: 100vh;
+    }
+
+    .app-header {
+      background: linear-gradient(180deg, var(--header-blue) 0%, var(--header-blue-deep) 100%);
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px 0 28px;
+      box-shadow: inset 0 -1px rgba(255,255,255,0.1);
+    }
+
+    .app-header .title {
+      color: #fff;
+      font-size: clamp(1.8rem, 2vw, 2.4rem);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      margin: 0;
+      line-height: 1;
+    }
+
+    .menu-toggle {
+      width: 42px;
+      height: 42px;
+      border: none;
+      background: transparent;
+      color: #fff;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      line-height: 1;
+      border-radius: 8px;
+      transition: background 0.2s ease;
+    }
+
+    .menu-toggle:hover {
+      background: rgba(255,255,255,0.08);
+    }
+
+    .global-nav {
+      position: absolute;
+      top: 68px;
+      right: 18px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 180px;
+      background: rgba(8, 61, 105, 0.96);
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+      z-index: 20;
+    }
+
+    .global-nav.open {
+      display: flex;
+    }
+
+    .global-nav a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.98rem;
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+
+    .global-nav a:hover {
+      background: rgba(255,255,255,0.08);
+    }
+
+    .page-shell {
+      max-width: 920px;
+      margin: 28px auto 60px;
+      padding: 0 12px;
+    }
+
+    .content-panel {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      box-shadow: var(--shadow-soft);
+      padding: 18px 18px 20px;
+      margin-bottom: 22px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 6px 0 10px;
+    }
+
+    .section-header .icon {
+      font-size: 1.4rem;
+      line-height: 1;
+      color: var(--blue-accent);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+    }
+
+    .section-header h2 {
+      margin: 0;
+      font-size: clamp(1.1rem, 2vw, 1.8rem);
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: 0.04em;
+    }
+
+    .map-shell {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid #d8e1e8;
+      background: #dfeef7;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
+    }
+
+    #shelterMap {
+      width: 100%;
+      height: 420px;
+      background: #dfeef7;
+    }
+
+    .weather-panel {
+      padding: 18px 22px 10px;
+    }
+
+    .weather-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #dfe8ec;
+      padding-bottom: 10px;
+    }
+
+    .weather-header .icon {
+      color: var(--blue-accent);
+    }
+
+    .refresh-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      color: #0b9b63;
+      background: rgba(43, 181, 115, 0.1);
+      font-size: 0.97rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .weather-content {
+      padding: 12px 0 0;
+      color: var(--text-main);
+    }
+
+    .weather-content p {
+      margin: 10px 0;
+      color: var(--text-main);
+      font-size: 1rem;
+    }
+
+    .weather-list {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0;
+    }
+
+    .weather-list li {
+      margin: 8px 0;
+      color: var(--text-main);
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .weather-icon {
+      color: var(--green-success);
+      font-size: 1rem;
+    }
+
+    .weather-note {
+      color: var(--text-soft);
+      font-size: 0.96rem;
+    }
+
+    @media (max-width: 640px) {
+      .app-header {
+        padding: 0 16px;
+      }
+
+      .page-shell {
+        margin-top: 18px;
+      }
+
+      .weather-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      #shelterMap {
+        height: 320px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <!-- ヘッダー -->
-  <h1>防災アプリ</h1>
+  <header class="app-header">
+    <h1 class="title">防災アプリ</h1>
+    <button class="menu-toggle" type="button" aria-label="メニュー" onclick="document.querySelector('.global-nav').classList.toggle('open')">☰</button>
+  </header>
 
-  <!-- ナビゲーション -->
-  <nav>
-    <a href="/">ホーム</a> |
-    <a href="/shelter_search">避難所検索</a> |
-    <a href="/shelter_register">避難所登録</a> |
+  <nav class="global-nav" aria-label="メインメニュー">
+    <a href="/">ホーム</a>
+    <a href="/shelter_search">避難所検索</a>
+    <a href="/shelter_register">避難所登録</a>
     <a href="/board">指示・発信ボード</a>
-    ｜
     {% if session.logged_in %}
-      ログイン中{% if session.username %}（{{ session.username }}）{% endif %}
       <a href="/logout">ログアウト</a>
     {% else %}
-      未ログイン
       <a href="/login">ログイン</a>
     {% endif %}
   </nav>
-  <hr>
 
-  <main>
-    <!-- ここに子テンプレートの content が入る -->
+  <main class="page-shell">
     {% block content %}{% endblock %}
   </main>
 </body>
