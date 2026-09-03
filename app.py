@@ -167,24 +167,22 @@ def geocode_address(address):
 
 
 def ensure_shelter_locations(items):
-    """位置情報がない既存避難所を名称で一度だけジオコーディングする"""
+    """住所を基準に避難所の位置情報を補完・更新する"""
     changed = False
     for shelter in items:
-        name = str(shelter.get('name', '')).strip()
+        address = str(shelter.get('address', '')).strip()
         latitude = shelter.get('latitude')
         longitude = shelter.get('longitude')
-        if shelter.get('location_geocoded'):
+        if shelter.get('location_query') == address and latitude is not None and longitude is not None:
             continue
-        if latitude is not None and longitude is not None and shelter.get('address') and shelter.get('address') != name:
+        if not address:
             continue
-        if not name:
-            continue
-        coordinates = geocode_address(f'{name}, 日本')
+        coordinates = geocode_address(address)
         if coordinates is None:
             continue
-        shelter['address'] = shelter.get('address') or name
         shelter['latitude'], shelter['longitude'] = coordinates
         shelter['location_geocoded'] = True
+        shelter['location_query'] = address
         changed = True
     if changed:
         save_shelters()
@@ -616,6 +614,7 @@ def shelter_register():
             'address': address,
             'latitude': coordinates[0],
             'longitude': coordinates[1],
+            'location_query': address,
             'capacity': capacity,
             'pet_allowed': request.form.get('pet_allowed', 'no'),
             'barrier_free': request.form.get('barrier_free', 'no'),
@@ -871,7 +870,7 @@ def search_results():
 # JSON API：/shelters?district=地区名
 @app.route('/shelters', methods=['GET'])
 def get_shelters():
-    results = filter_shelters(request.args.get('district'))
+    results = ensure_shelter_locations(filter_shelters(request.args.get('district')))
 
     if not results:
         # 見つからなければエラー JSON を返す

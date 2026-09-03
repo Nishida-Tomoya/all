@@ -1,15 +1,5 @@
 [
   {
-    "name": "青森小学校",
-    "address": "滋賀県栗東市小野",
-    "latitude": 35.018767,
-    "longitude": 136.01389,
-    "capacity": 100,
-    "pet_allowed": "yes",
-    "barrier_free": "yes",
-    "id": 1
-  },
-  {
     "name": "浜田福祉館",
     "address": "青森市青葉3-8-1",
     "latitude": 40.5747963,
@@ -17,7 +7,11 @@
     "capacity": 300,
     "pet_allowed": "yes",
     "barrier_free": "yes",
-    "id": 2
+    "id": 2,
+    "location_geocoded": true,
+    "location_query": "青森市青葉3-8-1",
+    "crowd_status": 290,
+    "current_evacuees": 290
   },
   {
     "name": "莨町小学校",
@@ -27,7 +21,9 @@
     "capacity": 150,
     "pet_allowed": "yes",
     "barrier_free": "yes",
-    "id": 3
+    "id": 3,
+    "location_geocoded": true,
+    "location_query": "青森市青柳2丁目"
   },
   {
     "name": "戸山中学校",
@@ -37,7 +33,9 @@
     "capacity": 250,
     "pet_allowed": "yes",
     "barrier_free": "yes",
-    "id": 4
+    "id": 4,
+    "location_geocoded": true,
+    "location_query": "青森市赤坂一丁目"
   },
   {
     "name": "片岡福祉館",
@@ -47,7 +45,9 @@
     "capacity": 90,
     "pet_allowed": "no",
     "barrier_free": "no",
-    "id": 5
+    "id": 5,
+    "location_geocoded": true,
+    "location_query": "青森市旭町3丁目"
   },
   {
     "name": "造道中学校",
@@ -57,7 +57,9 @@
     "capacity": 150,
     "pet_allowed": "yes",
     "barrier_free": "yes",
-    "id": 6
+    "id": 6,
+    "location_geocoded": true,
+    "location_query": "青森市岡造道二丁目"
   },
   {
     "name": "沖館市民センター",
@@ -67,7 +69,9 @@
     "capacity": 200,
     "pet_allowed": "yes",
     "barrier_free": "yes",
-    "id": 7
+    "id": 7,
+    "location_geocoded": true,
+    "location_query": "青森市沖館一丁目"
   },
   {
     "name": "沖館小学校",
@@ -77,6 +81,8 @@
     "capacity": 100,
     "pet_allowed": "no",
     "barrier_free": "yes",
-    "id": 8
+    "id": 8,
+    "location_geocoded": true,
+    "location_query": "青森市沖館五丁目"
   }
 ]
