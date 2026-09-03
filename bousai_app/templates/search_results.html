@@ -63,7 +63,7 @@
               <span class="shelter-metrics">
                 {% set current_evacuees = shelter.current_evacuees if shelter.current_evacuees is defined else (shelter.crowd_status if shelter.crowd_status is defined else 0) %}
                 {% if shelter.capacity is defined and shelter.capacity|int > 0 %}
-                  <span>収容率: {{ [current_evacuees|int / shelter.capacity|int * 100, 100]|min|round(1) }}%（{{ current_evacuees }}人 / {{ shelter.capacity }}人）</span>
+                  <span>収容率{{ '（仮）' if shelter.capacity_estimated else '' }}: {{ [current_evacuees|int / shelter.capacity|int * 100, 100]|min|round(1) }}%（{{ current_evacuees }}人 / {{ shelter.capacity }}人）</span>
                 {% else %}
                   <span>収容率: 収容人数未登録（{{ current_evacuees }}人）</span>
                 {% endif %}
