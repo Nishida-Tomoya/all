@@ -54,8 +54,10 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    margin-top: 12px;
   }
 
+  .safety-evacuation-form input,
   .safety-evacuation-form select {
     min-height: 40px;
     padding: 8px 10px;
@@ -108,33 +110,32 @@
   <div class="safety-actions">
     <a href="{{ url_for('group_create') }}">グループを作成</a>
     <a class="secondary" href="{{ url_for('group_join') }}">グループに参加</a>
-    {% if session.logged_in %}
-      <form class="safety-evacuation-form" method="post" action="{{ url_for('group_safety_update') }}">
-        <label for="safety-shelter">避難先</label>
-        <select id="safety-shelter" name="shelter_name" required>
-          <option value="">避難所を選択</option>
-          {% for shelter in shelters %}
-            <option value="{{ shelter.name }}">{{ shelter.name }}</option>
-          {% endfor %}
-        </select>
-        <button type="submit">避難</button>
-      </form>
-    {% endif %}
   </div>
 
-  {% if not session.logged_in %}
-    <p>ログインすると、所属グループの安否状況を確認できます。</p>
-  {% elif not user_groups %}
+  {% if not user_groups %}
     <p>まだ所属しているグループはありません。</p>
   {% else %}
     {% for group in user_groups %}
       <article class="safety-group">
         <h3>{{ group.group_name }}</h3>
         <p><strong>招待コード:</strong> {{ group.invite_code }}</p>
+        <form class="safety-evacuation-form" method="post" action="{{ url_for('group_safety_update') }}">
+          <input type="hidden" name="group_id" value="{{ group.id }}">
+          <label for="member-name-{{ group.id }}">名前</label>
+          <input id="member-name-{{ group.id }}" type="text" name="member_name" value="{{ session.group_member_name or session.username or '' }}" required>
+          <label for="safety-shelter-{{ group.id }}">避難先</label>
+          <select id="safety-shelter-{{ group.id }}" name="shelter_name" required>
+            <option value="">避難所を選択</option>
+            {% for shelter in shelters %}
+              <option value="{{ shelter.name }}">{{ shelter.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit">避難</button>
+        </form>
         <strong>メンバー</strong>
         <ul class="safety-members">
           {% for member in group.members %}
-            <li>{% if member.name == (session.group_member_name or session.username) %}あなた{% else %}{{ member.name }}{% endif %}: {{ member.status or '未確認' }}</li>
+            <li>{{ member.name }}: {{ member.status or '未確認' }}</li>
           {% endfor %}
         </ul>
       </article>

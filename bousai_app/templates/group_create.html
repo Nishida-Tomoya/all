@@ -31,6 +31,7 @@
     <form class="group-form" method="post">
       <div class="group-field"><label for="group-name">グループ名</label><input id="group-name" type="text" name="group_name" value="{{ group_name or '' }}" required></div>
       <div class="group-field"><label for="invite-code">招待コード</label><input id="invite-code" type="text" name="invite_code" value="{{ invite_code or '' }}" required></div>
+      <div class="group-field"><label for="member-name">名前</label><input id="member-name" type="text" name="username" value="{{ username or '' }}" required></div>
       <button class="group-submit" type="submit">作成する</button>
     </form>
     <p class="group-back"><a href="{{ url_for('index') }}">ホームへ戻る</a></p>

@@ -442,16 +442,23 @@ def login():
 
 
 @app.route('/group_create', methods=['GET', 'POST'])
-@login_required
 def group_create():
     if request.method == 'POST':
         group_name = request.form.get('group_name', '').strip()
         invite_code = request.form.get('invite_code', '').strip().upper()
+        member_name = request.form.get('username', '').strip()
 
         if not group_name:
             return render_template('group_create.html', error='グループ名を入力してください')
         if not invite_code:
             return render_template('group_create.html', error='招待コードを入力してください')
+        if not member_name:
+            return render_template(
+                'group_create.html',
+                error='名前を入力してください',
+                group_name=group_name,
+                invite_code=invite_code,
+            )
         if any(group.get('invite_code', '').upper() == invite_code for group in groups):
             return render_template(
                 'group_create.html',
@@ -465,19 +472,18 @@ def group_create():
             'group_name': group_name,
             'invite_code': invite_code,
             'members': [{
-                'name': session.get('username', ''),
+                'name': member_name,
                 'status': '未確認',
             }],
         })
-        session['group_member_name'] = session.get('username', '')
+        session['group_member_name'] = member_name
         save_groups()
         return redirect(url_for('index'))
 
-    return render_template('group_create.html')
+    return render_template('group_create.html', username=session.get('group_member_name') or session.get('username', ''))
 
 
 @app.route('/group_join', methods=['GET', 'POST'])
-@login_required
 def group_join():
     if request.method == 'POST':
         group_name = request.form.get('group_name', '').strip()
@@ -521,20 +527,23 @@ def group_join():
         session['group_member_name'] = member_name
         return redirect(url_for('index'))
 
-    return render_template('group_join.html')
+    return render_template('group_join.html', username=session.get('group_member_name') or session.get('username', ''))
 
 
 @app.route('/group_safety_update', methods=['POST'])
-@login_required
 def group_safety_update():
+    group_id = request.form.get('group_id', '').strip()
+    member_name = request.form.get('member_name', '').strip()
     shelter_name = request.form.get('shelter_name', '').strip()
+    group = next((item for item in groups if str(item.get('id')) == group_id), None)
     shelter = next((item for item in shelters if item.get('name') == shelter_name), None)
-    if shelter is not None:
-        member_name = session.get('group_member_name') or session.get('username')
-        for group in get_current_user_groups():
-            for member in group.get('members', []):
-                if member.get('name') == member_name:
-                    member['status'] = f'{shelter_name}に避難済み'
+    if group is not None and member_name and shelter is not None:
+        member = next(
+            (item for item in group.get('members', []) if item.get('name') == member_name),
+            None,
+        )
+        if member is not None:
+            member['status'] = f'{shelter_name}に避難済み'
         save_groups()
     return redirect(url_for('index'))
 
