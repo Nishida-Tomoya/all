@@ -151,6 +151,60 @@ def filter_shelters(district=None):
     return [s for s in shelters if not district or s.get('district') == district]
 
 
+def get_shelter_statuses():
+    """登録済みの避難所状況を発信ボード用の項目に変換する"""
+    statuses = []
+    for shelter in shelters:
+        has_status = shelter.get('status_updated_at') or any(
+            shelter.get(field) not in (None, '')
+            for field in ('capacity', 'supply_status', 'status_note')
+        )
+        if not has_status:
+            continue
+
+        statuses.append({
+            'type': 'shelter_status',
+            'shelter_id': shelter.get('id'),
+            'shelter': shelter.get('name', ''),
+            'capacity': shelter.get('capacity'),
+            'supply_status': shelter.get('supply_status', ''),
+            'status_note': shelter.get('status_note', ''),
+            'updated_at': shelter.get('status_updated_at', ''),
+            'district': shelter.get('district', ''),
+        })
+    return statuses
+
+
+def get_board_items(selected_district=''):
+    """住民向け指示と避難所状況を発信ボードの表示順で返す"""
+    resident_instructions = [
+        dict(item, type='instruction')
+        for item in instructions
+        if item.get('target') == '住民'
+        and (not selected_district or item.get('district') == selected_district)
+    ]
+    shelter_statuses = [
+        item for item in get_shelter_statuses()
+        if not selected_district or not item.get('district')
+        or item.get('district') == selected_district
+    ]
+    return resident_instructions + shelter_statuses
+
+
+@app.context_processor
+def inject_board_items():
+    """ログイン不要の共通発信欄へ住民向け情報を渡す"""
+    return {
+        'base_board_items': get_board_items(),
+        'base_board_districts': sorted({
+            str(item.get('district') or '全域')
+            for item in get_board_items()
+            if item.get('district')
+        }),
+        'shelters': shelters,
+    }
+
+
 def parse_area_warnings(warning_data):
     """気象庁の新形式JSONから対象市区町村の発表・継続中の情報を抽出する"""
     if not isinstance(warning_data, list):
@@ -331,16 +385,100 @@ def board():
     is_admin = bool(session.get('logged_in'))
 
     if request.method == 'POST':
+        if not is_admin:
+            return redirect(url_for('login', next=request.url))
+
+        action = request.form.get('action', '')
+        item_id = request.form.get('item-id', '').strip()
+
+        if action in ('edit_instruction', 'delete_instruction'):
+            try:
+                instruction_id = int(item_id)
+            except ValueError:
+                instruction_id = -1
+            instruction = next(
+                (item for item in instructions if item.get('id') == instruction_id
+                 and item.get('target') == '住民'),
+                None
+            )
+            if instruction is None:
+                message = '対象の指示が見つかりません。'
+            elif action == 'delete_instruction':
+                instructions.remove(instruction)
+                save_instructions()
+                message = '指示を削除しました。'
+            else:
+                instruction_content = request.form.get('instruction-content', '').strip()
+                importance = request.form.get('importance', '').strip()
+                district = request.form.get('instruction-district', '').strip()
+                if not instruction_content or not importance or not district:
+                    message = '指示内容・重要度・対象地区を入力してください。'
+                else:
+                    instruction.update({
+                        'content': instruction_content,
+                        'importance': importance,
+                        'district': district,
+                        'shelter': request.form.get('instruction-shelter', '').strip(),
+                        'time': request.form.get('instruction-time', '').strip() or instruction.get('time', ''),
+                        'updated_at': get_japan_time(),
+                    })
+                    save_instructions()
+                    message = '指示を更新しました。'
+            return render_template(
+                'board.html',
+                instructions=get_board_items(selected_district),
+                districts=sorted({str(i.get('district') or '全域') for i in instructions if i.get('target') == '住民'}),
+                district_filter=selected_district,
+                is_admin=is_admin,
+                success_message=message if instruction is not None and action == 'delete_instruction' or instruction is not None and action == 'edit_instruction' and '入力してください' not in message else None,
+                error_message=message if instruction is None or '入力してください' in message else None,
+            )
+
+        if action in ('edit_shelter_status', 'delete_shelter_status'):
+            try:
+                shelter_id = int(item_id)
+            except ValueError:
+                shelter_id = -1
+            shelter = next((item for item in shelters if item.get('id') == shelter_id), None)
+            if shelter is None:
+                message = '対象の避難所状況が見つかりません。'
+            elif action == 'delete_shelter_status':
+                for field in ('capacity', 'supply_status', 'status_note', 'status_updated_at'):
+                    shelter.pop(field, None)
+                save_shelters()
+                message = '避難所状況を削除しました。'
+            else:
+                capacity = request.form.get('capacity', '').strip()
+                try:
+                    shelter['capacity'] = int(capacity) if capacity else None
+                except ValueError:
+                    shelter['capacity'] = None
+                shelter['supply_status'] = request.form.get('supply-status', '').strip()
+                shelter['status_note'] = request.form.get('status-note', '').strip()
+                shelter['status_updated_at'] = get_japan_time()
+                save_shelters()
+                message = '避難所状況を更新しました。'
+            return render_template(
+                'board.html',
+                instructions=get_board_items(selected_district),
+                districts=sorted({str(i.get('district') or '全域') for i in instructions if i.get('target') == '住民'}),
+                district_filter=selected_district,
+                is_admin=is_admin,
+                success_message=message if shelter is not None else None,
+                error_message=message if shelter is None else None,
+            )
+
         if 'instruction-content' in request.form:
             instruction_content = request.form.get('instruction-content', '').strip()
             importance = request.form.get('importance', '').strip()
             instruction_time = request.form.get('instruction-time', '').strip()
             district = request.form.get('instruction-district', '').strip()
+            shelter_name = request.form.get('instruction-shelter', '').strip()
 
             if not instruction_content or not importance or not district:
                 return render_template(
                     'board.html',
-                    instructions=[i for i in instructions if i.get('target') == '住民'],
+                    instructions=get_board_items(selected_district),
                     districts=sorted({str(i.get('district') or '全域') for i in instructions if i.get('target') == '住民'}),
                     district_filter=selected_district,
                     is_admin=is_admin,
@@ -353,7 +491,7 @@ def board():
                 'content': instruction_content,
                 'importance': importance,
                 'district': district,
-                'shelter': '',
+                'shelter': shelter_name,
                 'time': instruction_time or datetime.now(JST).strftime('%H:%M'),
                 'created_at': get_japan_time(),
                 'updated_at': get_japan_time(),
@@ -367,7 +505,7 @@ def board():
 
             return render_template(
                 'board.html',
-                instructions=[i for i in instructions if i.get('target') == '住民'],
+                instructions=get_board_items(selected_district),
                 districts=sorted({str(i.get('district') or '全域') for i in instructions if i.get('target') == '住民'}),
                 district_filter=selected_district,
                 is_admin=is_admin,
@@ -396,6 +534,7 @@ def board():
                     shelter['capacity'] = int(capacity) if capacity else shelter.get('capacity')
                     shelter['supply_status'] = supply_status or shelter.get('supply_status', '')
                     shelter['status_note'] = status_note or shelter.get('status_note', '')
+                    shelter['status_updated_at'] = get_japan_time()
                     matched = True
                     break
 
@@ -406,6 +545,7 @@ def board():
                     'capacity': int(capacity) if capacity else 0,
                     'supply_status': supply_status,
                     'status_note': status_note,
+                    'status_updated_at': get_japan_time(),
                 })
 
             try:
@@ -416,21 +556,17 @@ def board():
 
             return render_template(
                 'board.html',
-                instructions=[i for i in instructions if i.get('target') == '住民'],
+                instructions=get_board_items(selected_district),
                 districts=sorted({str(i.get('district') or '全域') for i in instructions if i.get('target') == '住民'}),
                 district_filter=selected_district,
                 is_admin=is_admin,
                 success_message='避難所状況を登録しました。'
             )
 
-    resident_instructions = [
-        i for i in instructions
-        if i.get('target') == '住民' and (not selected_district or i.get('district') == selected_district)
-    ]
     districts = sorted({str(i.get('district') or '全域') for i in instructions if i.get('target') == '住民'})
     return render_template(
         'board.html',
-        instructions=resident_instructions,
+        instructions=get_board_items(selected_district),
         districts=districts,
         district_filter=selected_district,
         is_admin=is_admin

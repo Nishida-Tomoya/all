@@ -224,6 +224,139 @@
       font-size: 0.96rem;
     }
 
+    .common-board {
+      max-width: 1100px;
+      color: #1f2937;
+      margin-bottom: 22px;
+    }
+
+    .common-board-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .common-board-header h2 {
+      margin: 0;
+      color: #123b5c;
+      font-size: 1.5rem;
+    }
+
+    .common-board-filter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: #fff;
+      border: 1px solid #dfe7ef;
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .common-board-filter label {
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .common-board-filter select {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+      font-size: 0.92rem;
+    }
+
+    .common-board-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .common-board-card {
+      border-radius: 14px;
+      border: 1px solid #dfe7ef;
+      border-left: 8px solid #2563eb;
+      background: #eff6ff;
+      padding: 14px 16px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+      transition: opacity 0.2s ease;
+    }
+
+    .common-board-card.urgent {
+      border-left-color: #dc2626;
+      background: #fff5f5;
+    }
+
+    .common-board-card.warning {
+      border-left-color: #d97706;
+      background: #fffaf0;
+    }
+
+    .common-board-card.shelter-status {
+      border-left-color: #0f766e;
+      background: #ecfdf5;
+    }
+
+    .common-board-card.confirmed {
+      opacity: 0.65;
+      order: 999;
+    }
+
+    .common-board-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .common-board-badge {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .common-board-badge.urgent { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+    .common-board-badge.warning { background: rgba(217, 119, 6, 0.12); color: #b45309; }
+    .common-board-badge.info { background: rgba(37, 99, 235, 0.12); color: #1d4ed8; }
+    .common-board-badge.shelter-status { background: rgba(15, 118, 110, 0.14); color: #0f766e; }
+
+    .common-board-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #334155;
+      font-size: 0.88rem;
+      cursor: pointer;
+    }
+
+    .common-board-card h3 {
+      margin: 12px 0 6px;
+      color: #0f172a;
+      font-size: 1.08rem;
+    }
+
+    .common-board-card p {
+      margin: 5px 0;
+      color: #334155;
+      line-height: 1.6;
+    }
+
+    .common-board-meta {
+      margin-top: 8px;
+      color: #475569;
+      font-size: 0.84rem;
+    }
+
+    .common-board-empty {
+      color: #475569;
+      margin: 0;
+    }
+
     @media (max-width: 640px) {
       .app-header {
         padding: 0 16px;
@@ -263,7 +396,93 @@
   </nav>
 
   <main class="page-shell">
+    {% if base_board_items and request.endpoint != 'board' %}
+      <section class="common-board" aria-label="発信情報">
+        <div class="common-board-header">
+          <h2>発信情報</h2>
+          <div class="common-board-filter">
+            <label for="commonBoardDistrict">地区フィルター</label>
+            <select id="commonBoardDistrict">
+              <option value="">全地区</option>
+              {% for district in base_board_districts %}
+                <option value="{{ district }}">{{ district }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="common-board-list" id="commonBoardList">
+          {% for item in base_board_items %}
+            {% set importance = (item.importance or '情報')|string %}
+            {% set importance_class = 'info' %}
+            {% if importance == '緊急' %}{% set importance_class = 'urgent' %}
+            {% elif importance == '警告' %}{% set importance_class = 'warning' %}
+            {% endif %}
+            {% set card_class = 'shelter-status' if item.type == 'shelter_status' else importance_class %}
+            <article class="common-board-card {{ card_class }}" data-district="{{ item.district or '' }}" data-board-key="{{ item.type }}-{{ item.id or item.shelter }}">
+              <div class="common-board-card-header">
+                <span class="common-board-badge {{ card_class }}">{% if item.type == 'shelter_status' %}避難所状況{% else %}{{ importance }}{% endif %}</span>
+                <label class="common-board-check">
+                  <input type="checkbox" data-board-check="{{ item.type }}-{{ item.id or item.shelter }}">
+                  確認済み
+                </label>
+              </div>
+              {% if item.type == 'shelter_status' %}
+                <h3>{{ item.shelter }}</h3>
+                {% if item.capacity is not none %}<p><strong>残りの収容可能人数:</strong> {{ item.capacity }}人</p>{% endif %}
+                {% if item.supply_status %}<p><strong>物資の状況:</strong> {{ item.supply_status }}</p>{% endif %}
+                {% if item.status_note %}<p><strong>状況メモ:</strong> {{ item.status_note }}</p>{% endif %}
+                {% if item.updated_at %}<p class="common-board-meta">更新時刻: {{ item.updated_at }}</p>{% endif %}
+              {% else %}
+                <h3>指示内容</h3>
+                <p>{{ item.content }}</p>
+                {% if item.shelter %}<p><strong>避難先:</strong> {{ item.shelter }}</p>{% endif %}
+                <p class="common-board-meta">{% if item.time or item.created_at %}発信時刻: {{ item.time or item.created_at }}{% endif %}{% if item.district %} / 対象地区: {{ item.district }}{% endif %}</p>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
+  {% if base_board_items and request.endpoint != 'board' %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const list = document.getElementById('commonBoardList');
+      const filter = document.getElementById('commonBoardDistrict');
+      const storageKey = 'bousai-confirmed-board-items';
+      const confirmed = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+      function applyBoardState() {
+        const selectedDistrict = filter.value;
+        Array.from(list.querySelectorAll('[data-board-key]')).forEach(function(card) {
+          const key = card.dataset.boardKey;
+          const checkbox = card.querySelector('[data-board-check]');
+          const isConfirmed = confirmed.includes(key);
+          checkbox.checked = isConfirmed;
+          card.classList.toggle('confirmed', isConfirmed);
+          card.hidden = Boolean(selectedDistrict && card.dataset.district !== selectedDistrict);
+          if (isConfirmed) list.appendChild(card);
+        });
+      }
+
+      list.addEventListener('change', function(event) {
+        const checkbox = event.target.closest('[data-board-check]');
+        if (!checkbox) return;
+        const key = checkbox.dataset.boardCheck;
+        if (checkbox.checked && !confirmed.includes(key)) confirmed.push(key);
+        if (!checkbox.checked) {
+          const index = confirmed.indexOf(key);
+          if (index !== -1) confirmed.splice(index, 1);
+        }
+        localStorage.setItem(storageKey, JSON.stringify(confirmed));
+        applyBoardState();
+      });
+
+      filter.addEventListener('change', applyBoardState);
+      applyBoardState();
+    });
+  </script>
+  {% endif %}
 </body>
 </html>

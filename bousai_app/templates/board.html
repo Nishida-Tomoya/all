@@ -88,6 +88,10 @@
     border-left: 8px solid #2563eb;
     background: linear-gradient(180deg, #eff6ff 0%, #ffffff 20%);
   }
+  .notice-card.shelter-status {
+    border-left: 8px solid #0f766e;
+    background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 20%);
+  }
   .notice-header {
     display: flex;
     justify-content: space-between;
@@ -247,6 +251,45 @@
     font-weight: 700;
     cursor: pointer;
   }
+  .admin-item-actions {
+    border-top: 1px solid #dfe7ef;
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+  .edit-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+  }
+  .edit-form-grid textarea {
+    grid-column: 1 / -1;
+    min-height: 70px;
+    resize: vertical;
+  }
+  .edit-form-grid input, .edit-form-grid select, .edit-form-grid textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    background: white;
+  }
+  .edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .edit-btn, .delete-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .edit-btn { background: #0f766e; }
+  .delete-btn { background: #b91c1c; }
   @media (max-width: 640px) {
     .topbar {
       flex-direction: column;
@@ -303,38 +346,102 @@
         {% if importance == '緊急' %}{% set importance_class = 'urgent' %}
         {% elif importance == '警告' %}{% set importance_class = 'warning' %}
         {% endif %}
-        {% set shelter_name = inst.shelter or '未指定' %}
         {% set district_name = inst.district or '全域' %}
-        {% set time_value = inst.time or inst.created_at or '未設定' %}
+        {% set time_value = inst.time or inst.created_at or inst.updated_at or '' %}
 
-        <article class="notice-card {{ importance_class }}">
+        <article class="notice-card {% if inst.type == 'shelter_status' %}shelter-status{% else %}{{ importance_class }}{% endif %}">
           <div class="notice-header">
-            <span class="importance-badge importance-{{ importance_class }}">{{ importance }}</span>
-            <span class="chip">{{ district_name }}</span>
+            {% if inst.type == 'shelter_status' %}
+              <span class="importance-badge importance-info">避難所状況</span>
+              {% if inst.district %}<span class="chip">{{ district_name }}</span>{% endif %}
+            {% else %}
+              <span class="importance-badge importance-{{ importance_class }}">{{ importance }}</span>
+              <span class="chip">{{ district_name }}</span>
+            {% endif %}
           </div>
 
           <div class="notice-meta">
-            <span>発信時刻: {{ time_value }}</span>
-            <span>対象地区: {{ district_name }}</span>
+            {% if time_value %}<span>{% if inst.type == 'shelter_status' %}更新時刻{% else %}発信時刻{% endif %}: {{ time_value }}</span>{% endif %}
+            {% if inst.type != 'shelter_status' %}<span>対象地区: {{ district_name }}</span>{% endif %}
           </div>
 
           <div class="notice-body">
-            <h3>指示内容</h3>
-            <p>{{ inst.content }}</p>
-
-            {% if inst.shelter %}
-              <p><strong>避難先:</strong> {{ inst.shelter }}</p>
+            {% if inst.type == 'shelter_status' %}
+              <h3>{{ inst.shelter }}</h3>
+              {% if inst.capacity is not none %}<p><strong>残りの収容可能人数:</strong> {{ inst.capacity }}人</p>{% endif %}
+              {% if inst.supply_status %}<p><strong>物資の状況:</strong> {{ inst.supply_status }}</p>{% endif %}
+              {% if inst.status_note %}<p><strong>状況メモ:</strong> {{ inst.status_note }}</p>{% endif %}
+            {% else %}
+              <h3>指示内容</h3>
+              <p>{{ inst.content }}</p>
+              {% if inst.shelter %}<p><strong>避難先:</strong> {{ inst.shelter }}</p>{% endif %}
             {% endif %}
 
             <div class="action-row">
               <div>
                 {% if inst.shelter %}
                   <a class="map-link" href="https://www.google.com/maps/search/?api=1&query={{ inst.shelter | urlencode }}" target="_blank" rel="noopener noreferrer">避難所マップを開く</a>
-                {% else %}
-                  <span class="chip">避難先未設定</span>
                 {% endif %}
               </div>
             </div>
+
+            {% if is_admin %}
+              <div class="admin-item-actions">
+                {% if inst.type == 'shelter_status' %}
+                  <form method="post" action="/board">
+                    <input type="hidden" name="action" value="edit_shelter_status">
+                    <input type="hidden" name="item-id" value="{{ inst.shelter_id }}">
+                    <div class="edit-form-grid">
+                      <input type="number" name="capacity" min="0" value="{{ inst.capacity if inst.capacity is not none else '' }}" placeholder="残りの収容可能人数">
+                      <textarea name="supply-status" placeholder="物資の状況">{{ inst.supply_status }}</textarea>
+                      <textarea name="status-note" placeholder="状況メモ">{{ inst.status_note }}</textarea>
+                    </div>
+                    <div class="edit-actions">
+                      <button class="edit-btn" type="submit">状況を更新</button>
+                    </div>
+                  </form>
+                  <form method="post" action="/board" onsubmit="return confirm('この避難所状況を削除しますか？');">
+                    <input type="hidden" name="action" value="delete_shelter_status">
+                    <input type="hidden" name="item-id" value="{{ inst.shelter_id }}">
+                    <div class="edit-actions"><button class="delete-btn" type="submit">状況を削除</button></div>
+                  </form>
+                {% else %}
+                  <form method="post" action="/board">
+                    <input type="hidden" name="action" value="edit_instruction">
+                    <input type="hidden" name="item-id" value="{{ inst.id }}">
+                    <div class="edit-form-grid">
+                      <textarea name="instruction-content" placeholder="指示内容">{{ inst.content }}</textarea>
+                      <select name="importance">
+                        <option value="緊急" {% if inst.importance == '緊急' %}selected{% endif %}>緊急</option>
+                        <option value="警告" {% if inst.importance == '警告' %}selected{% endif %}>警告</option>
+                        <option value="情報" {% if inst.importance == '情報' or not inst.importance %}selected{% endif %}>情報</option>
+                      </select>
+                      <select name="instruction-district">
+                        <option value="青森市" {% if inst.district == '青森市' %}selected{% endif %}>青森市</option>
+                        <option value="中央地区" {% if inst.district == '中央地区' %}selected{% endif %}>中央地区</option>
+                        <option value="西地区" {% if inst.district == '西地区' %}selected{% endif %}>西地区</option>
+                        <option value="東地区" {% if inst.district == '東地区' %}selected{% endif %}>東地区</option>
+                      </select>
+                      <select name="instruction-shelter">
+                        <option value="">選択しない</option>
+                        {% for shelter in shelters %}
+                          <option value="{{ shelter.name }}" {% if inst.shelter == shelter.name %}selected{% endif %}>{{ shelter.name }}</option>
+                        {% endfor %}
+                      </select>
+                      <input type="time" name="instruction-time" value="{{ inst.time }}">
+                    </div>
+                    <div class="edit-actions">
+                      <button class="edit-btn" type="submit">指示を更新</button>
+                    </div>
+                  </form>
+                  <form method="post" action="/board" onsubmit="return confirm('この指示を削除しますか？');">
+                    <input type="hidden" name="action" value="delete_instruction">
+                    <input type="hidden" name="item-id" value="{{ inst.id }}">
+                    <div class="edit-actions"><button class="delete-btn" type="submit">指示を削除</button></div>
+                  </form>
+                {% endif %}
+              </div>
+            {% endif %}
           </div>
         </article>
       {% endfor %}
@@ -383,6 +490,16 @@
               <option value="中央地区">中央地区</option>
               <option value="西地区">西地区</option>
               <option value="東地区">東地区</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="instruction-shelter">避難先（任意）</label>
+            <select id="instruction-shelter" name="instruction-shelter">
+              <option value="">選択しない</option>
+              {% for shelter in shelters %}
+                <option value="{{ shelter.name }}">{{ shelter.name }}</option>
+              {% endfor %}
             </select>
           </div>
 
