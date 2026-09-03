@@ -21,26 +21,58 @@
   .radio-options label { font-weight: 500; }
   .register-button { grid-column: 1 / -1; justify-self: start; padding: 10px 22px; border: 1px solid #93c5fd; border-radius: 4px; background: #dbeafe; color: #1e3a8a; font-size: 1rem; font-weight: 800; cursor: pointer; }
   .register-button:hover { background: #bfdbfe; }
+  .shelter-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .shelter-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px; border: 1px solid #9ca3af; border-radius: 4px; background: #fff; }
+  .shelter-details { min-width: 0; }
+  .shelter-details strong, .shelter-details span { display: block; }
+  .shelter-details span { margin-top: 4px; color: #4b5563; }
+  .shelter-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .action-button { padding: 8px 14px; border: 1px solid #9ca3af; border-radius: 4px; background: #fff; color: #1f2937; font-weight: 700; text-decoration: none; cursor: pointer; }
+  .action-button.delete { border-color: #fca5a5; color: #991b1b; }
+  .action-button:hover { background: #f3f4f6; }
+  .empty-message { margin: 0; color: #4b5563; }
   @media (max-width: 768px) { .register-form { grid-template-columns: 1fr; } .register-button { grid-column: auto; } .register-section { padding: 16px; } }
+  @media (max-width: 560px) { .shelter-item { align-items: flex-start; flex-direction: column; } .shelter-actions { width: 100%; } .action-button { flex: 1; text-align: center; } }
 </style>
 
 <div class="register-page">
   <h2>避難所情報登録</h2>
   <section class="register-section">
     <div class="register-heading">
-      <h3>避難所情報登録</h3>
+      <h3>{{ '避難所情報を編集' if shelter_to_edit else '避難所情報登録' }}</h3>
       {% if success %}<p class="form-message success">{{ message }}</p>{% endif %}
       {% if error %}<p class="form-message error">{{ message }}</p>{% endif %}
     </div>
     <form class="register-form" method="post">
       <input type="hidden" name="form_type" value="shelter">
-      <div class="field"><label for="name">避難所名</label><input id="name" type="text" name="name" value="{{ shelter_name or '' }}" required></div>
-      <div class="field"><label for="address">住所</label><input id="address" type="text" name="address" value="{{ address or '' }}" required></div>
-      <div class="field"><label for="capacity">最大収容人数</label><input id="capacity" type="number" name="capacity" min="0" step="1" value="{{ capacity if capacity is defined else '' }}" required></div>
-      <fieldset class="field"><legend>ペット</legend><div class="radio-options"><label><input type="radio" name="pet_allowed" value="yes" checked> 対応可</label><label><input type="radio" name="pet_allowed" value="no"> 対応不可</label></div></fieldset>
-      <fieldset class="field"><legend>バリアフリー</legend><div class="radio-options"><label><input type="radio" name="barrier_free" value="yes" checked> 対応可</label><label><input type="radio" name="barrier_free" value="no"> 対応不可</label></div></fieldset>
-      <button class="register-button" type="submit">登録</button>
+      {% if shelter_to_edit %}<input type="hidden" name="edit_id" value="{{ shelter_to_edit.id }}">{% endif %}
+      <div class="field"><label for="name">避難所名</label><input id="name" type="text" name="name" value="{{ shelter_name if shelter_name is defined else (shelter_to_edit.name if shelter_to_edit else '') }}" required></div>
+      <div class="field"><label for="address">住所</label><input id="address" type="text" name="address" value="{{ address if address is defined else (shelter_to_edit.address if shelter_to_edit else '') }}" required></div>
+      <div class="field"><label for="capacity">最大収容人数</label><input id="capacity" type="number" name="capacity" min="0" step="1" value="{{ capacity if capacity is defined else (shelter_to_edit.capacity if shelter_to_edit and shelter_to_edit.capacity is defined else '') }}" required></div>
+      <fieldset class="field"><legend>ペット</legend><div class="radio-options"><label><input type="radio" name="pet_allowed" value="yes" {% if not shelter_to_edit or shelter_to_edit.pet_allowed != 'no' %}checked{% endif %}> 対応可</label><label><input type="radio" name="pet_allowed" value="no" {% if shelter_to_edit and shelter_to_edit.pet_allowed == 'no' %}checked{% endif %}> 対応不可</label></div></fieldset>
+      <fieldset class="field"><legend>バリアフリー</legend><div class="radio-options"><label><input type="radio" name="barrier_free" value="yes" {% if not shelter_to_edit or shelter_to_edit.barrier_free != 'no' %}checked{% endif %}> 対応可</label><label><input type="radio" name="barrier_free" value="no" {% if shelter_to_edit and shelter_to_edit.barrier_free == 'no' %}checked{% endif %}> 対応不可</label></div></fieldset>
+      <button class="register-button" type="submit">{{ '更新' if shelter_to_edit else '登録' }}</button>
     </form>
+  </section>
+
+  <section class="register-section">
+    <div class="register-heading"><h3>登録済み避難所一覧</h3></div>
+    {% if shelters %}
+      <ul class="shelter-list">
+        {% for shelter in shelters %}
+          <li class="shelter-item">
+            <div class="shelter-details"><strong>{{ shelter.name }}</strong><span>{{ shelter.address or '住所未登録' }} / 最大{{ shelter.capacity if shelter.capacity is defined else '未設定' }}人</span></div>
+            <div class="shelter-actions">
+              <a class="action-button" href="{{ url_for('shelter_register', edit=shelter.id) }}">編集</a>
+              <form method="post" onsubmit="return confirm('この避難所を削除しますか？');">
+                <input type="hidden" name="form_type" value="delete_shelter"><input type="hidden" name="shelter_id" value="{{ shelter.id }}">
+                <button class="action-button delete" type="submit">削除</button>
+              </form>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}<p class="empty-message">登録済みの避難所はありません。</p>{% endif %}
   </section>
 
   <section class="register-section">

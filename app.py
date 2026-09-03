@@ -550,8 +550,26 @@ def logout():
 @app.route('/shelter_register', methods=['GET', 'POST'])
 @login_required
 def shelter_register():
+    edit_id = request.args.get('edit', '').strip()
+    shelter_to_edit = next(
+        (item for item in shelters if str(item.get('id')) == edit_id),
+        None,
+    ) if edit_id else None
+
     if request.method == 'POST':
         form_type = request.form.get('form_type', 'shelter')
+        if form_type == 'delete_shelter':
+            shelter_id = request.form.get('shelter_id', '').strip()
+            shelter = next(
+                (item for item in shelters if str(item.get('id')) == shelter_id),
+                None,
+            )
+            if shelter is None:
+                return render_template('shelter_register.html', shelters=shelters, error=True, message='削除対象の避難所が見つかりません。')
+            shelters.remove(shelter)
+            save_shelters()
+            return render_template('shelter_register.html', shelters=shelters, success=True, message='避難所を削除しました。')
+
         if form_type == 'crowd':
             shelter_name = request.form.get('crowd_shelter_name', '').strip()
             crowd_status_value = request.form.get('crowd_status', '').strip()
@@ -578,23 +596,22 @@ def shelter_register():
         address = request.form.get('address', '').strip()
         capacity_value = request.form.get('capacity', '').strip()
         if not shelter_name:
-            return render_template('shelter_register.html', error=True, message='避難所名を入力してください', shelters=shelters)
+            return render_template('shelter_register.html', error=True, message='避難所名を入力してください', shelters=shelters, shelter_to_edit=shelter_to_edit)
         if not address:
-            return render_template('shelter_register.html', error=True, message='住所を入力してください', shelter_name=shelter_name, address=address, capacity=capacity_value, shelters=shelters)
+            return render_template('shelter_register.html', error=True, message='住所を入力してください', shelter_name=shelter_name, address=address, capacity=capacity_value, shelters=shelters, shelter_to_edit=shelter_to_edit)
         try:
             capacity = int(capacity_value)
         except ValueError:
             capacity = -1
         if capacity < 0:
-            return render_template('shelter_register.html', error=True, message='最大収容人数は0以上の整数で入力してください', shelter_name=shelter_name, address=address, capacity=capacity_value, shelters=shelters)
+            return render_template('shelter_register.html', error=True, message='最大収容人数は0以上の整数で入力してください', shelter_name=shelter_name, address=address, capacity=capacity_value, shelters=shelters, shelter_to_edit=shelter_to_edit)
 
         coordinates = geocode_address(address)
         if coordinates is None:
-            return render_template('shelter_register.html', error=True, message='住所の位置情報を取得できませんでした。住所を確認して再度お試しください。', shelter_name=shelter_name, address=address, capacity=capacity_value, shelters=shelters)
+            return render_template('shelter_register.html', error=True, message='住所の位置情報を取得できませんでした。住所を確認して再度お試しください。', shelter_name=shelter_name, address=address, capacity=capacity_value, shelters=shelters, shelter_to_edit=shelter_to_edit)
 
-        next_id = max((s.get('id', 0) for s in shelters), default=0) + 1
-        shelters.append({
-            'id': next_id,
+        shelter_data = dict(shelter_to_edit) if shelter_to_edit is not None else {}
+        shelter_data.update({
             'name': shelter_name,
             'address': address,
             'latitude': coordinates[0],
@@ -602,13 +619,18 @@ def shelter_register():
             'capacity': capacity,
             'pet_allowed': request.form.get('pet_allowed', 'no'),
             'barrier_free': request.form.get('barrier_free', 'no'),
-            'current_evacuees': 0,
-            'crowd_status': 0,
         })
+        if shelter_to_edit is not None:
+            shelter_to_edit.clear()
+            shelter_to_edit.update(shelter_data)
+        else:
+            shelter_data['id'] = max((s.get('id', 0) for s in shelters), default=0) + 1
+            shelters.append(shelter_data)
         save_shelters()
-        return render_template('shelter_register.html', shelters=shelters, success=True, message='避難所を登録しました。')
+        message = '避難所情報を更新しました。' if shelter_to_edit is not None else '避難所を登録しました。'
+        return render_template('shelter_register.html', shelters=shelters, success=True, message=message)
 
-    return render_template('shelter_register.html', shelters=shelters)
+    return render_template('shelter_register.html', shelters=shelters, shelter_to_edit=shelter_to_edit)
 
 # 避難所検索ページ
 @app.route('/shelter_search')

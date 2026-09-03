@@ -13,5 +13,39 @@
         "status": "未確認"
       }
     ]
+  },
+  {
+    "id": 2,
+    "group_name": "テスト",
+    "invite_code": "1234",
+    "members": [
+      {
+        "name": "admin",
+        "status": "御所見小学校に避難済み"
+      },
+      {
+        "name": "あああ",
+        "status": "未確認"
+      },
+      {
+        "name": "まさき2",
+        "status": "鵠洋小学校に避難済み"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "group_name": "ぺっぱん",
+    "invite_code": "001",
+    "members": [
+      {
+        "name": "admin",
+        "status": "未確認"
+      },
+      {
+        "name": "まさき2",
+        "status": "鵠洋小学校に避難済み"
+      }
+    ]
   }
 ]

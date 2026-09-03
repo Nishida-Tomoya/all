@@ -2,10 +2,13 @@
   {
     "id": 1,
     "name": "御所見小学校",
-    "address": "御所見小学校",
-    "latitude": 35.8732885,
-    "longitude": 139.5088823,
-    "location_geocoded": true
+    "address": "滋賀県栗東市小野",
+    "latitude": 35.018767,
+    "longitude": 136.01389,
+    "location_geocoded": true,
+    "capacity": 100,
+    "pet_allowed": "yes",
+    "barrier_free": "yes"
   },
   {
     "id": 2,
@@ -31,8 +34,8 @@
     "address": "まさき小学校",
     "latitude": 33.9225224,
     "longitude": 134.4259067,
-    "crowd_status": 3000,
-    "current_evacuees": 3000
+    "crowd_status": 35,
+    "current_evacuees": 35
   },
   {
     "id": 7,
@@ -45,5 +48,17 @@
     "barrier_free": "yes",
     "current_evacuees": 40,
     "crowd_status": 40
+  },
+  {
+    "id": 8,
+    "name": "育和小学校",
+    "address": "大阪府大阪市東住吉区杭全4丁目",
+    "latitude": 34.6344006,
+    "longitude": 135.5362899,
+    "capacity": 400,
+    "pet_allowed": "yes",
+    "barrier_free": "yes",
+    "current_evacuees": 395,
+    "crowd_status": 395
   }
 ]
