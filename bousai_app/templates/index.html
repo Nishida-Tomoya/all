@@ -23,11 +23,131 @@
   </div>
 </div>
 
+<style>
+  .safety-panel {
+    padding: 20px 22px;
+  }
+
+  .safety-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 14px 0 18px;
+  }
+
+  .safety-actions a {
+    display: inline-block;
+    padding: 10px 14px;
+    border-radius: 9px;
+    color: #fff;
+    background: #0a4a7a;
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .safety-actions a.secondary {
+    background: #0f766e;
+  }
+
+  .safety-evacuation-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .safety-evacuation-form select {
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #334155;
+  }
+
+  .safety-evacuation-form button {
+    min-height: 40px;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 8px;
+    background: #dc2626;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .safety-group {
+    border: 1px solid #d8e1e8;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-top: 12px;
+    background: #fff;
+  }
+
+  .safety-group h3 {
+    margin: 0 0 6px;
+    color: #123b5c;
+  }
+
+  .safety-group p {
+    margin: 5px 0;
+  }
+
+  .safety-members {
+    margin: 8px 0 0;
+    padding-left: 20px;
+  }
+</style>
+
+<section class="content-panel safety-panel" aria-labelledby="safety-title">
+  <div class="section-header">
+    <span class="icon">👥</span>
+    <h2 id="safety-title">安否確認</h2>
+  </div>
+
+  <div class="safety-actions">
+    <a href="{{ url_for('group_create') }}">グループを作成</a>
+    <a class="secondary" href="{{ url_for('group_join') }}">グループに参加</a>
+    {% if session.logged_in %}
+      <form class="safety-evacuation-form" method="post" action="{{ url_for('group_safety_update') }}">
+        <label for="safety-shelter">避難先</label>
+        <select id="safety-shelter" name="shelter_name" required>
+          <option value="">避難所を選択</option>
+          {% for shelter in shelters %}
+            <option value="{{ shelter.name }}">{{ shelter.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit">避難</button>
+      </form>
+    {% endif %}
+  </div>
+
+  {% if not session.logged_in %}
+    <p>ログインすると、所属グループの安否状況を確認できます。</p>
+  {% elif not user_groups %}
+    <p>まだ所属しているグループはありません。</p>
+  {% else %}
+    {% for group in user_groups %}
+      <article class="safety-group">
+        <h3>{{ group.group_name }}</h3>
+        <p><strong>招待コード:</strong> {{ group.invite_code }}</p>
+        <strong>メンバー</strong>
+        <ul class="safety-members">
+          {% for member in group.members %}
+            <li>{% if member.name == (session.group_member_name or session.username) %}あなた{% else %}{{ member.name }}{% endif %}: {{ member.status or '未確認' }}</li>
+          {% endfor %}
+        </ul>
+      </article>
+    {% endfor %}
+  {% endif %}
+</section>
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  const translate = window.bousaiTranslateText || function(text) { return text; };
     const map = L.map('shelterMap').setView([40.8244, 140.7400], 12);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -43,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('気象情報の更新に失敗しました:', error);
                 const weatherContent = document.getElementById('weatherContent');
-                weatherContent.innerHTML = '<p>気象情報の取得に失敗しました</p>';
+                weatherContent.innerHTML = '<p>' + translate('気象情報の取得に失敗しました') + '</p>';
             });
     }
 
@@ -51,11 +171,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const weatherContent = document.getElementById('weatherContent');
 
         if (data.error) {
-            weatherContent.innerHTML = '<p>気象情報の取得に失敗しました</p>';
+            weatherContent.innerHTML = '<p>' + translate('気象情報の取得に失敗しました') + '</p>';
             return;
         }
 
-        let warningsHtml = '<p>現在、警報・注意報は発表されていません</p>';
+        let warningsHtml = '<p>' + translate('現在、警報・注意報は発表されていません') + '</p>';
         if (data.warnings && data.warnings.length > 0) {
             warningsHtml = '<ul class="weather-list">';
             data.warnings.forEach(warning => {

@@ -1,8 +1,259 @@
 {% extends "base.html" %}
 
-{% block content %}
-<h2>避難所検索</h2>
-<p>登録されている避難所を確認できます。</p>
+{% block title %}避難所検索{% endblock %}
 
-<p><a href="/all_shelters">全施設一覧</a></p>
+{% block content %}
+<style>
+	.search-page {
+		color: #1f2937;
+	}
+
+	.search-page h2 {
+		margin: 0 0 8px;
+		color: #123b5c;
+	}
+
+	.search-layout {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: 20px;
+		margin-top: 20px;
+	}
+
+	.search-panel {
+		background: #fff;
+		border: 1px solid #dfe7ef;
+		border-radius: 14px;
+		padding: 20px;
+		box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+	}
+
+	.search-panel h3 {
+		margin: 0 0 16px;
+		color: #123b5c;
+	}
+
+	.facility-list {
+		max-height: 390px;
+		overflow-y: auto;
+		margin-top: 16px;
+		padding: 0;
+		list-style: none;
+		border-top: 1px solid #e2e8f0;
+	}
+
+	.facility-list li {
+		padding: 12px 4px;
+		border-bottom: 1px solid #e2e8f0;
+	}
+
+	.facility-id {
+		color: #64748b;
+		font-size: 0.86rem;
+	}
+
+	.status-message {
+		margin: 14px 0 0;
+		color: #475569;
+	}
+
+	.search-field {
+		margin-bottom: 16px;
+	}
+
+	.search-field label,
+	.radio-group legend {
+		display: block;
+		margin-bottom: 6px;
+		color: #334155;
+		font-weight: 700;
+	}
+
+	.search-field input[type="text"],
+	.search-field input[type="number"],
+	.search-field select {
+		width: 100%;
+		border: 1px solid #cbd5e1;
+		border-radius: 9px;
+		padding: 10px 12px;
+		background: #fff;
+		font-size: 1rem;
+	}
+
+	.radio-group {
+		margin: 0 0 16px;
+		padding: 0;
+		border: 0;
+	}
+
+	.radio-options {
+		display: flex;
+		gap: 14px;
+		flex-wrap: wrap;
+	}
+
+	.radio-options label {
+		color: #334155;
+	}
+
+	.search-button,
+	.all-facilities-button,
+	.maps-button {
+		border: 0;
+		border-radius: 9px;
+		color: #fff;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
+	.all-facilities-button,
+	.search-button {
+		background: #0a4a7a;
+		padding: 10px 16px;
+	}
+
+	.all-facilities-button:hover,
+	.search-button:hover {
+		background: #083d69;
+	}
+
+	.maps-button-wrap {
+		display: flex;
+		justify-content: flex-end;
+		margin-top: 10px;
+	}
+
+	.maps-button {
+		background: #1d4ed8;
+		padding: 9px 14px;
+	}
+
+	.maps-button:hover {
+		background: #1e40af;
+	}
+
+	.search-result-message {
+		margin: 12px 0 0;
+		color: #475569;
+	}
+
+	@media (max-width: 700px) {
+		.search-layout {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
+
+<div class="search-page">
+	<h2>避難所検索</h2>
+	<p>避難所を一覧または条件から確認できます。</p>
+
+	<div class="search-layout">
+		<section class="search-panel" aria-labelledby="facility-list-title">
+			<h3 id="facility-list-title">全施設一覧</h3>
+			<button id="loadFacilitiesButton" class="all-facilities-button" type="button">全施設一覧を表示</button>
+			<p id="facilityStatus" class="status-message" aria-live="polite">全施設一覧を表示してください。</p>
+			<ul id="facilityList" class="facility-list" aria-live="polite"></ul>
+		</section>
+
+		<section class="search-panel" aria-labelledby="search-form-title">
+			<h3 id="search-form-title">条件検索</h3>
+			<form id="shelterSearchForm" method="get" action="{{ url_for('search_results') }}">
+				<div class="search-field">
+					<label for="query">避難所名または地区名</label>
+					<input id="query" type="text" name="query" placeholder="例：中央地区">
+				</div>
+
+				<div class="search-field">
+					<label for="disaster-type">災害の種類を選択</label>
+					<select id="disaster-type" name="disaster_type">
+						<option value="">指定なし</option>
+						<option value="earthquake">地震</option>
+						<option value="flood">洪水</option>
+						<option value="storm">暴風</option>
+						<option value="landslide">土砂災害</option>
+						<option value="tsunami">津波</option>
+						<option value="snow">大雪</option>
+					</select>
+				</div>
+
+				<fieldset class="radio-group">
+					<legend>バリアフリー対応</legend>
+					<div class="radio-options">
+						<label><input type="radio" name="barrier_free" value="" checked> 指定なし</label>
+						<label><input type="radio" name="barrier_free" value="yes"> 可</label>
+						<label><input type="radio" name="barrier_free" value="no"> 不可</label>
+					</div>
+				</fieldset>
+
+				<fieldset class="radio-group">
+					<legend>ペット同伴</legend>
+					<div class="radio-options">
+						<label><input type="radio" name="pets_allowed" value="" checked> 指定なし</label>
+						<label><input type="radio" name="pets_allowed" value="yes"> 可</label>
+						<label><input type="radio" name="pets_allowed" value="no"> 不可</label>
+					</div>
+				</fieldset>
+
+				<button class="search-button" type="submit">検索</button>
+				<div class="maps-button-wrap">
+					<button id="googleMapsButton" class="maps-button" type="button">Google map</button>
+				</div>
+				<p id="searchResultMessage" class="search-result-message" aria-live="polite"></p>
+			</form>
+		</section>
+	</div>
+</div>
+
+<script>
+	document.addEventListener('DOMContentLoaded', function() {
+		const translate = window.bousaiTranslateText || function(text) { return text; };
+		const loadButton = document.getElementById('loadFacilitiesButton');
+		const status = document.getElementById('facilityStatus');
+		const list = document.getElementById('facilityList');
+		const searchForm = document.getElementById('shelterSearchForm');
+		const resultMessage = document.getElementById('searchResultMessage');
+		const googleMapsButton = document.getElementById('googleMapsButton');
+
+		loadButton.addEventListener('click', function() {
+			status.textContent = translate('読み込み中...');
+			list.replaceChildren();
+			fetch('{{ url_for('get_shelters') }}')
+				.then(function(response) {
+					if (!response.ok) throw new Error('施設情報を取得できませんでした');
+					return response.json();
+				})
+				.then(function(facilities) {
+					if (!facilities.length) {
+						status.textContent = translate('登録されている施設はありません。');
+						return;
+					}
+					facilities.forEach(function(facility) {
+						const item = document.createElement('li');
+						const name = document.createElement('strong');
+						name.textContent = facility.name || '名称未設定';
+						const id = document.createElement('span');
+						id.className = 'facility-id';
+						id.textContent = '施設ID: ' + (facility.id ?? '未設定');
+						item.append(name, document.createElement('br'), id);
+						list.appendChild(item);
+					});
+						status.textContent = facilities.length + translate('件の施設を表示しています。');
+				})
+				.catch(function() {
+					status.textContent = translate('施設情報の取得に失敗しました。');
+				});
+		});
+
+		searchForm.addEventListener('submit', function() {
+			const data = new FormData(searchForm);
+			resultMessage.textContent = translate('検索条件を送信しました。');
+			resultMessage.dataset.conditions = JSON.stringify(Object.fromEntries(data.entries()));
+		});
+
+		googleMapsButton.addEventListener('click', function() {
+			window.open('https://www.google.com/maps/', '_blank', 'noopener');
+		});
+	});
+</script>
 {% endblock %}

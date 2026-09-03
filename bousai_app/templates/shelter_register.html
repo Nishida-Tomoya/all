@@ -1,23 +1,56 @@
 {% extends "base.html" %}
 
+{% block title %}避難所情報登録{% endblock %}
+
 {% block content %}
-<h2>避難所登録</h2>
-<p>新しい避難所情報を登録します。</p>
+<style>
+  .register-page { max-width: 960px; margin: 0 auto; color: #1f2937; }
+  .register-page h2 { margin: 0 0 20px; color: #123b5c; font-size: 1.8rem; font-weight: 800; }
+  .register-section { margin-bottom: 22px; padding: 22px; border: 3px solid #111827; border-radius: 4px; background: #f3f4f6; }
+  .register-heading { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 0 0 18px; }
+  .register-heading h3 { margin: 0; font-size: 1.45rem; font-weight: 800; }
+  .form-message { margin: 0; font-weight: 700; }
+  .form-message.success { color: #15803d; }
+  .form-message.error { color: #991b1b; }
+  .register-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 22px; }
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field label, .field legend { font-weight: 700; }
+  .field input[type="text"], .field input[type="number"], .field select { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid #9ca3af; border-radius: 4px; background: #fff; font-size: 1rem; }
+  .field fieldset, .field legend { padding: 0; border: 0; }
+  .radio-options { display: flex; gap: 16px; flex-wrap: wrap; }
+  .radio-options label { font-weight: 500; }
+  .register-button { grid-column: 1 / -1; justify-self: start; padding: 10px 22px; border: 1px solid #93c5fd; border-radius: 4px; background: #dbeafe; color: #1e3a8a; font-size: 1rem; font-weight: 800; cursor: pointer; }
+  .register-button:hover { background: #bfdbfe; }
+  @media (max-width: 768px) { .register-form { grid-template-columns: 1fr; } .register-button { grid-column: auto; } .register-section { padding: 16px; } }
+</style>
 
-<!-- 成功・エラーメッセージ表示 -->
-{% if success %}
-  <p>{{ message }}</p>
-{% endif %}
+<div class="register-page">
+  <h2>避難所情報登録</h2>
+  <section class="register-section">
+    <div class="register-heading">
+      <h3>避難所情報登録</h3>
+      {% if success %}<p class="form-message success">{{ message }}</p>{% endif %}
+      {% if error %}<p class="form-message error">{{ message }}</p>{% endif %}
+    </div>
+    <form class="register-form" method="post">
+      <input type="hidden" name="form_type" value="shelter">
+      <div class="field"><label for="name">避難所名</label><input id="name" type="text" name="name" value="{{ shelter_name or '' }}" required></div>
+      <div class="field"><label for="address">住所</label><input id="address" type="text" name="address" value="{{ address or '' }}" required></div>
+      <div class="field"><label for="capacity">最大収容人数</label><input id="capacity" type="number" name="capacity" min="0" step="1" value="{{ capacity if capacity is defined else '' }}" required></div>
+      <fieldset class="field"><legend>ペット</legend><div class="radio-options"><label><input type="radio" name="pet_allowed" value="yes" checked> 対応可</label><label><input type="radio" name="pet_allowed" value="no"> 対応不可</label></div></fieldset>
+      <fieldset class="field"><legend>バリアフリー</legend><div class="radio-options"><label><input type="radio" name="barrier_free" value="yes" checked> 対応可</label><label><input type="radio" name="barrier_free" value="no"> 対応不可</label></div></fieldset>
+      <button class="register-button" type="submit">登録</button>
+    </form>
+  </section>
 
-{% if error %}
-  <p>{{ message }}</p>
-{% endif %}
-
-<form method="POST">
-  <p>
-    <label for="name">避難所名（必須）</label><br>
-    <input type="text" id="name" name="name">
-  </p>
-  <p><button type="submit">登録</button></p>
-</form>
+  <section class="register-section">
+    <div class="register-heading"><h3>混雑状況登録</h3>{% if crowd_success %}<p class="form-message success">{{ crowd_success }}</p>{% endif %}{% if crowd_error %}<p class="form-message error">{{ crowd_error }}</p>{% endif %}</div>
+    <form class="register-form" method="post">
+      <input type="hidden" name="form_type" value="crowd">
+      <div class="field"><label for="crowd-shelter-name">避難所名</label><select id="crowd-shelter-name" name="crowd_shelter_name" required><option value="">選択してください</option>{% for shelter in shelters %}<option value="{{ shelter.name }}">{{ shelter.name }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="crowd-status">現在の避難者数</label><input id="crowd-status" type="number" name="crowd_status" min="0" step="1" required></div>
+      <button class="register-button" type="submit">登録</button>
+    </form>
+  </section>
+</div>
 {% endblock %}

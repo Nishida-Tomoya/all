@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}グループを作成{% endblock %}
+
+{% block content %}
+<style>
+  .group-page { max-width: 680px; margin: 0 auto; }
+  .group-panel { background: #fff; border: 1px solid #dfe7ef; border-radius: 18px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06); padding: 28px; }
+  .group-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .group-heading .icon { font-size: 1.5rem; color: #1d7fd3; }
+  .group-panel h2 { margin: 0; color: #123b5c; font-size: 1.8rem; }
+  .group-description { margin: 0 0 24px; color: #5b6f7c; line-height: 1.7; }
+  .group-form { display: grid; gap: 18px; }
+  .group-field { display: flex; flex-direction: column; gap: 7px; }
+  .group-field label { color: #334155; font-weight: 700; }
+  .group-field input { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; font-size: 1rem; }
+  .group-field input:focus { outline: 3px solid rgba(29, 127, 211, 0.18); border-color: #1d7fd3; }
+  .group-error { margin: 0 0 18px; padding: 11px 13px; border: 1px solid #fecaca; border-radius: 9px; background: #fef2f2; color: #991b1b; font-weight: 700; }
+  .group-submit { justify-self: start; padding: 10px 22px; border: 0; border-radius: 9px; background: #0a4a7a; color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; }
+  .group-submit:hover { background: #083d69; }
+  .group-back { margin: 22px 0 0; }
+  .group-back a { color: #1d7fd3; font-weight: 700; }
+  @media (max-width: 640px) { .group-panel { padding: 20px 16px; } .group-panel h2 { font-size: 1.5rem; } }
+</style>
+
+<div class="group-page">
+  <section class="group-panel">
+    <div class="group-heading"><span class="icon">👥</span><h2>グループを作成</h2></div>
+    <p class="group-description">家族や友人と安否状況を共有するグループを作成します。</p>
+    {% if error %}<p class="group-error" role="alert">{{ error }}</p>{% endif %}
+    <form class="group-form" method="post">
+      <div class="group-field"><label for="group-name">グループ名</label><input id="group-name" type="text" name="group_name" value="{{ group_name or '' }}" required></div>
+      <div class="group-field"><label for="invite-code">招待コード</label><input id="invite-code" type="text" name="invite_code" value="{{ invite_code or '' }}" required></div>
+      <button class="group-submit" type="submit">作成する</button>
+    </form>
+    <p class="group-back"><a href="{{ url_for('index') }}">ホームへ戻る</a></p>
+  </section>
+</div>
+{% endblock %}

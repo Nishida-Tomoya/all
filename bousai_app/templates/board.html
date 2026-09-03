@@ -334,6 +334,16 @@
         <option value="{{ district }}" {% if district == district_filter %}selected{% endif %}>{{ district }}</option>
         {% endfor %}
       </select>
+      <select id="importanceFilter" name="importance" aria-label="重要度フィルター">
+        <option value="">重要度: 全て</option>
+        <option value="緊急" {% if importance_filter == '緊急' %}selected{% endif %}>緊急</option>
+        <option value="警告" {% if importance_filter == '警告' %}selected{% endif %}>警告</option>
+        <option value="情報" {% if importance_filter == '情報' %}selected{% endif %}>情報</option>
+      </select>
+      <select id="confirmationFilter" name="confirmation" aria-label="確認状態フィルター">
+        <option value="">確認状態: 全て</option>
+        <option value="unconfirmed" {% if confirmation_filter == 'unconfirmed' %}selected{% endif %}>未確認</option>
+      </select>
       <button type="submit">絞り込み</button>
     </form>
   </div>

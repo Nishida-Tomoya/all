@@ -1,21 +1,49 @@
 [
   {
     "id": 1,
-    "name": "御所見小学校"
+    "name": "御所見小学校",
+    "address": "御所見小学校",
+    "latitude": 35.8732885,
+    "longitude": 139.5088823,
+    "location_geocoded": true
   },
   {
     "id": 2,
-    "name": "片瀬小学校"
+    "name": "片瀬小学校",
+    "address": "片瀬小学校",
+    "latitude": 34.812764,
+    "longitude": 139.060244
   },
   {
     "id": 5,
-    "name": "鵠洋小学校"
+    "name": "鵠洋小学校",
+    "address": "鵠洋小学校",
+    "latitude": 35.0001599,
+    "longitude": 133.9554537,
+    "location_geocoded": true
   },
   {
     "id": 6,
     "name": "まさき小学校",
     "capacity": 12,
     "supply_status": "飲料水が明日には不足しそうです。",
-    "status_note": ""
+    "status_note": "",
+    "address": "まさき小学校",
+    "latitude": 33.9225224,
+    "longitude": 134.4259067,
+    "crowd_status": 3000,
+    "current_evacuees": 3000
+  },
+  {
+    "id": 7,
+    "name": "青森市立沖館小学校",
+    "address": "青森県青森市沖館",
+    "latitude": 40.8374075,
+    "longitude": 140.7210309,
+    "capacity": 300,
+    "pet_allowed": "yes",
+    "barrier_free": "yes",
+    "current_evacuees": 40,
+    "crowd_status": 40
   }
 ]

@@ -1,20 +1,299 @@
 {% extends "base.html" %}
-
+{% block title %}避難所の検索結果の一覧{% endblock %}
 {% block content %}
-<h2>検索結果</h2>
+<style>
+  .results-layout { display: grid; grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.5fr); gap: 20px; }
+  .results-panel { background: #fff; border: 1px solid #dfe7ef; border-radius: 14px; padding: 18px; box-shadow: 0 4px 12px rgba(15,23,42,.04); }
+  .results-panel h2 { margin-top: 0; color: #123b5c; }
+  .result-list { display: grid; gap: 10px; padding: 0; list-style: none; }
+  .result-button { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #123b5c; text-align: left; cursor: pointer; font-weight: 700; }
+  .result-button:hover, .result-button.recommended { border-color: #1d7fd3; background: #eff6ff; }
+  .result-button.recommended::before { content: 'おすすめ避難所 '; color: #0f766e; }
+  .result-id { display: block; margin-top: 4px; color: #64748b; font-size: .84rem; font-weight: 400; }
+  #resultMap { min-height: 480px; width: 100%; border-radius: 10px; background: #dfeef7; }
+  .map-status { color: #475569; line-height: 1.6; }
+  .hazard-warning { margin: 10px 0; padding: 10px 12px; border: 1px solid #f0c36b; border-radius: 8px; background: #fffaf0; color: #713f12; }
+  .route-summary { margin: 10px 0; color: #334155; font-weight: 700; }
+  .crowding-summary { display: flex; align-items: center; gap: 10px; margin: 14px 0; color: #334155; font-weight: 700; }
+  .crowding-fill { width: 0; height: 100%; border-radius: inherit; background: #1d7fd8; }
+  .crowding-bar { flex: 1; height: 16px; overflow: hidden; border-radius: 999px; background: #dbe4ec; }
+  .go-controls { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; }
+  .go-controls label { display: flex; flex-direction: column; gap: 4px; color: #334155; font-weight: 700; }
+  .go-controls select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 7px; }
+  .go-button { padding: 9px 16px; border: 0; border-radius: 8px; background: #0f766e; color: #fff; font-weight: 700; cursor: pointer; }
+  .modal-overlay { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(0, 0, 0, .62); }
+  .modal-overlay.open { display: flex; }
+  .shelter-modal { width: min(680px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; border-radius: 4px; background: #f3f4f6; box-shadow: 0 18px 50px rgba(0, 0, 0, .3); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; background: #fff; border-bottom: 1px solid #cbd5e1; }
+  .modal-header h3 { margin: 0; color: #123b5c; }
+  .close-modal { border: 1px solid #94a3b8; border-radius: 3px; background: #fff; color: #111827; padding: 4px 9px; font-size: 1.1rem; cursor: pointer; }
+  .modal-body { padding: 16px 18px 22px; }
+  .modal-map { width: 100%; height: 260px; border: 1px solid #cbd5e1; border-radius: 4px; background: #dfeef7; }
+  .google-map-link { display: inline-block; margin-top: 8px; color: #1d4ed8; font-weight: 700; }
+  .shelter-features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+  .shelter-feature { padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #334155; font-weight: 700; }
+  .map-label { margin: 0 0 6px; color: #334155; font-weight: 700; }
+  .crowding-row { display: flex; align-items: center; gap: 10px; margin: 16px 0 10px; color: #334155; font-weight: 700; }
+  .crowding-label { flex: 0 0 auto; }
+  .crowding-bar { flex: 1; height: 16px; overflow: hidden; border-radius: 2px; background: #dbe4ec; }
+  .crowding-fill { width: 0; height: 100%; background: #8dd3b0; transition: width .2s ease; }
+  .crowding-count { flex: 0 0 auto; white-space: nowrap; color: #111827; }
+  .leaflet-popup-content { line-height: 1.6; }
+  @media (max-width: 700px) { .results-layout { grid-template-columns: 1fr; } #resultMap { min-height: 360px; } }
+</style>
 
-{% if results %}
-  <ul>
-    {% for shelter in results %}
-    <li>{{ shelter.name }}</li>
-    {% endfor %}
-  </ul>
-{% else %}
-  <p>該当する避難所が見つかりませんでした</p>
-{% endif %}
+<div class="results-layout">
+  <section class="results-panel">
+    <h2>避難所の検索結果の一覧</h2>
+    {% if query %}<p>検索条件: {{ query }}</p>{% endif %}
+    {% if results %}
+      <ul class="result-list">
+        {% for shelter in results %}
+          <li>
+            <button class="result-button" type="button" data-shelter-id="{{ shelter.id }}" data-shelter-name="{{ shelter.name }}" data-address="{{ shelter.address or shelter.name }}" data-latitude="{{ shelter.latitude if shelter.latitude is defined else '' }}" data-longitude="{{ shelter.longitude if shelter.longitude is defined else '' }}" data-current-evacuees="{{ shelter.current_evacuees if shelter.current_evacuees is defined else 0 }}" data-capacity="{{ shelter.capacity if shelter.capacity is defined else '' }}" data-pet-allowed="{{ shelter.pet_allowed if shelter.pet_allowed is defined else '' }}" data-barrier-free="{{ shelter.barrier_free if shelter.barrier_free is defined else '' }}">
+              {{ shelter.name }}
+              <span class="result-id">施設ID: {{ shelter.id }}</span>
+            </button>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>該当する避難所が見つかりませんでした</p>
+    {% endif %}
+  </section>
+  <section class="results-panel">
+    <h2>避難所マップ</h2>
+    <p id="mapStatus" class="map-status">現在地の取得を開始します。</p>
+    <p id="hazardWarning" class="hazard-warning" hidden></p>
+    <p id="routeSummary" class="route-summary" aria-live="polite"></p>
+    <div id="resultMap" aria-label="避難所と徒歩ルートの地図"></div>
+  </section>
+</div>
+<p><a href="{{ url_for('shelter_search') }}">避難所検索へ戻る</a> | <a href="{{ url_for('index') }}">トップページへ戻る</a></p>
 
-<p>
-  <a href="/shelter_search">検索画面に戻る</a> |
-  <a href="/">トップページへ戻る</a>
-</p>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const translate = window.bousaiTranslateText || function(text) { return text; };
+    const shelters = Array.from(document.querySelectorAll('[data-shelter-id]'));
+    const mapStatus = document.getElementById('mapStatus');
+    const routeSummary = document.getElementById('routeSummary');
+    const hazardWarning = document.getElementById('hazardWarning');
+    const map = L.map('resultMap').setView([40.8244, 140.7400], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+    const shelterMarkers = new Map();
+    let locationMarker = null;
+    let routeLayer = null;
+    let currentPosition = null;
+    let selectedButton = null;
+    let routeRequestId = 0;
+
+    function validCoordinates(button) {
+      const latitude = Number(button.dataset.latitude);
+      const longitude = Number(button.dataset.longitude);
+      return Number.isFinite(latitude) && Number.isFinite(longitude) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
+    }
+
+    shelters.forEach(function(button) {
+      if (!validCoordinates(button)) return;
+      const point = [Number(button.dataset.latitude), Number(button.dataset.longitude)];
+      const marker = L.marker(point).addTo(map).bindPopup('<strong>' + button.dataset.shelterName.replace(/[&<>"']/g, '') + '</strong><br>' + button.dataset.address.replace(/[&<>"']/g, ''));
+      shelterMarkers.set(button.dataset.shelterId, marker);
+    });
+    if (!shelterMarkers.size) mapStatus.textContent = translate('位置情報が登録されている避難所はありません。');
+    else map.fitBounds(L.featureGroup(Array.from(shelterMarkers.values())).getBounds().pad(0.15));
+
+    function showHazards(data) {
+      const dangerWords = ['洪水', '大雨', '高潮', '津波', '土砂'];
+      const active = (data.warnings || []).filter(function(item) { return dangerWords.some(function(word) { return item.name.includes(word); }); });
+      if (!active.length) return;
+      hazardWarning.hidden = false;
+      hazardWarning.textContent = '発表中の災害情報: ' + active.map(function(item) { return item.name; }).join('、') + '。ルートは道路情報に基づく候補です。通行止め・浸水区間を除外できるデータはありません。公式情報と現地案内を優先してください。';
+    }
+    fetch('{{ url_for('api_weather_warnings') }}').then(function(response) { return response.json(); }).then(showHazards).catch(function() { hazardWarning.hidden = false; hazardWarning.textContent = '災害情報を取得できません。公式情報を確認してください。'; });
+
+    function fetchRoute(button) {
+      const params = new URLSearchParams({ start_latitude: currentPosition.coords.latitude, start_longitude: currentPosition.coords.longitude, end_latitude: button.dataset.latitude, end_longitude: button.dataset.longitude });
+      return fetch('{{ url_for('api_walking_route') }}?' + params).then(function(response) { if (!response.ok) throw new Error(); return response.json(); });
+    }
+
+    function requestRoute(button, cachedRoute) {
+      if (!currentPosition || !validCoordinates(button)) { routeSummary.textContent = validCoordinates(button) ? '現在地を取得できないため徒歩ルートを表示できません。' : 'この避難所には位置情報がないため徒歩ルートを表示できません。'; return; }
+      const requestId = ++routeRequestId;
+      if (routeLayer) map.removeLayer(routeLayer);
+      routeSummary.textContent = translate('徒歩ルートを取得中...');
+      const routePromise = cachedRoute ? Promise.resolve(cachedRoute) : fetchRoute(button);
+      routePromise.then(function(route) {
+        if (requestId !== routeRequestId || selectedButton !== button) return;
+        routeLayer = L.geoJSON({ type: 'Feature', geometry: { type: 'LineString', coordinates: route.geometry } }, { color: '#1d4ed8', weight: 5 }).addTo(map);
+        map.fitBounds(routeLayer.getBounds().pad(0.15));
+        routeSummary.textContent = translate('道路情報に基づく候補: 徒歩距離 ') + (route.distance / 1000).toFixed(1) + 'km / ' + translate('徒歩 ') + Math.ceil(route.duration / 60) + '分';
+      }).catch(function() { routeSummary.textContent = '徒歩ルートを取得できませんでした。距離と所要時間は表示できません。公式情報と現地案内を確認してください。'; });
+    }
+
+    function selectShelter(button, cachedRoute) {
+      selectedButton = button;
+      shelters.forEach(function(item) { item.classList.remove('recommended'); });
+      const marker = shelterMarkers.get(button.dataset.shelterId);
+      if (marker) { map.setView(marker.getLatLng(), 15); marker.openPopup(); }
+      requestRoute(button, cachedRoute);
+    }
+    shelters.forEach(function(button) { button.addEventListener('click', function() { selectShelter(button); }); });
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        currentPosition = position;
+        window.bousaiCurrentPosition = position;
+        locationMarker = L.marker([position.coords.latitude, position.coords.longitude]).addTo(map).bindPopup('現在地');
+        map.setView([position.coords.latitude, position.coords.longitude], 13);
+        const candidates = shelters.filter(function(button) { return validCoordinates(button); }).slice(0, 3);
+        if (!candidates.length) {
+          mapStatus.textContent = '現在地を表示しましたが、位置情報のある避難所がありません。';
+          return;
+        }
+        mapStatus.textContent = translate('現在地を表示しました。') + translate('おすすめ避難所を確認中...');
+        Promise.all(candidates.map(function(button) { return fetchRoute(button).then(function(route) { return { button: button, route: route }; }).catch(function() { return null; }); })).then(function(routeResults) {
+          const available = routeResults.filter(Boolean);
+          const recommended = available.length ? available.reduce(function(best, item) {
+            const capacity = Number(item.button.dataset.capacity);
+            const current = Number(item.button.dataset.currentEvacuees) || 0;
+            const vacancyRatio = capacity > 0 ? Math.max(0, capacity - current) / capacity : 0.5;
+            const score = item.route.duration * (1 + (1 - vacancyRatio) * 0.5);
+            return score < best.score ? { button: item.button, route: item.route, score: score } : best;
+          }, { button: available[0].button, route: available[0].route, score: Infinity }) : { button: candidates[0], route: null };
+          recommended.button.classList.add('recommended');
+          mapStatus.textContent = translate('現在地を表示しました。');
+          selectShelter(recommended.button, recommended.route);
+        });
+      }, function(error) { mapStatus.textContent = error.code === 1 ? '位置情報の利用が拒否されました。' : '現在地を取得できませんでした。'; }, { enableHighAccuracy: true, timeout: 10000 });
+    } else mapStatus.textContent = 'このブラウザは位置情報に対応していません。';
+  });
+</script>
+
+<div id="shelterModalOverlay" class="modal-overlay" role="presentation">
+  <section class="shelter-modal" role="dialog" aria-modal="true" aria-labelledby="modalShelterName">
+    <div class="modal-header">
+      <h3 id="modalShelterName"></h3>
+      <button id="closeShelterModal" class="close-modal" type="button">閉じる</button>
+    </div>
+    <div class="modal-body">
+      <p id="modalShelterId"></p>
+      <div class="shelter-features">
+        <div class="shelter-feature">バリアフリー: <span id="modalBarrierFree"></span></div>
+        <div class="shelter-feature">ペット: <span id="modalPetAllowed"></span></div>
+      </div>
+      <p class="map-label">避難所の地図</p>
+      <div id="shelterDetailMap" class="modal-map" aria-label="選択した避難所と現在地の地図"></div>
+      <a id="googleMapLink" class="google-map-link" href="#" target="_blank" rel="noopener noreferrer">Googleマップで開く</a>
+      <p id="modalRouteStatus" class="route-summary" aria-live="polite"></p>
+      <div class="crowding-row">
+        <span class="crowding-label">混雑状況</span>
+        <div class="crowding-bar"><div id="crowdingFill" class="crowding-fill"></div></div>
+        <span id="crowdingCount" class="crowding-count"></span>
+      </div>
+      <div class="go-controls">
+        <label for="goCount">行く人数
+          <select id="goCount">
+            {% for count in range(1, 16) %}<option value="{{ count }}">{{ count }}人</option>{% endfor %}
+          </select>
+        </label>
+        <button id="goButton" class="go-button" type="button">行く</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const translate = window.bousaiTranslateText || function(text) { return text; };
+    const overlay = document.getElementById('shelterModalOverlay');
+    const modalName = document.getElementById('modalShelterName');
+    const modalId = document.getElementById('modalShelterId');
+    const modalBarrierFree = document.getElementById('modalBarrierFree');
+    const modalPetAllowed = document.getElementById('modalPetAllowed');
+    const detailMapElement = document.getElementById('shelterDetailMap');
+    const googleMapLink = document.getElementById('googleMapLink');
+    const modalRouteStatus = document.getElementById('modalRouteStatus');
+    const fill = document.getElementById('crowdingFill');
+    const count = document.getElementById('crowdingCount');
+    const goCount = document.getElementById('goCount');
+    let selectedShelter = null;
+    const addedCounts = JSON.parse(localStorage.getItem('bousai-shelter-go-counts') || '{}');
+    let detailMap = null;
+    let detailLayers = null;
+    let modalRouteRequestId = 0;
+
+    function updateCrowding() {
+      const current = Number(selectedShelter.dataset.currentEvacuees) || 0;
+      const added = Number(addedCounts[selectedShelter.dataset.shelterId]) || 0;
+      const total = current + added;
+      const capacity = Number(selectedShelter.dataset.capacity);
+      const maximum = capacity > 0 ? capacity : Math.max(total, 1);
+      fill.style.width = Math.min(total / maximum * 100, 100) + '%';
+      count.textContent = total + '人 / ' + (capacity > 0 ? capacity + '人' : '収容人数');
+    }
+
+    function openModal(button) {
+      selectedShelter = button;
+      modalName.textContent = button.dataset.shelterName;
+      modalId.textContent = translate('施設ID:') + ' ' + button.dataset.shelterId;
+      modalBarrierFree.textContent = button.dataset.barrierFree === 'yes' ? '対応可' : button.dataset.barrierFree === 'no' ? '対応不可' : '未登録';
+      modalPetAllowed.textContent = button.dataset.petAllowed === 'yes' ? '対応可' : button.dataset.petAllowed === 'no' ? '対応不可' : '未登録';
+      const latitude = Number(button.dataset.latitude);
+      const longitude = Number(button.dataset.longitude);
+      googleMapLink.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(button.dataset.address);
+      overlay.classList.add('open');
+      if (!detailMap) {
+        const initialPoint = Number.isFinite(latitude) && Number.isFinite(longitude) ? [latitude, longitude] : [40.8244, 140.7400];
+        detailMap = L.map(detailMapElement).setView(initialPoint, 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(detailMap);
+        detailLayers = L.layerGroup().addTo(detailMap);
+      }
+      detailMap.invalidateSize();
+      window.requestAnimationFrame(function() { if (detailMap) detailMap.invalidateSize(); });
+      detailLayers.clearLayers();
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        L.marker([latitude, longitude]).bindPopup(button.dataset.shelterName).addTo(detailLayers).openPopup();
+        detailMap.setView([latitude, longitude], 15);
+      }
+      if (window.bousaiCurrentPosition) {
+        const current = window.bousaiCurrentPosition.coords;
+        L.marker([current.latitude, current.longitude]).bindPopup('現在地').addTo(detailLayers);
+        modalRouteStatus.textContent = translate('徒歩ルートを取得中...');
+        const requestId = ++modalRouteRequestId;
+        const params = new URLSearchParams({ start_latitude: current.latitude, start_longitude: current.longitude, end_latitude: latitude, end_longitude: longitude });
+        fetch('{{ url_for('api_walking_route') }}?' + params).then(function(response) { if (!response.ok) throw new Error(); return response.json(); }).then(function(route) {
+          if (requestId !== modalRouteRequestId) return;
+          L.geoJSON({ type: 'Feature', geometry: { type: 'LineString', coordinates: route.geometry } }, { color: '#1d4ed8', weight: 5 }).addTo(detailLayers);
+          modalRouteStatus.textContent = translate('道路情報に基づく候補: 徒歩距離 ') + (route.distance / 1000).toFixed(1) + 'km / ' + translate('徒歩 ') + Math.ceil(route.duration / 60) + '分';
+        }).catch(function() { if (requestId === modalRouteRequestId) modalRouteStatus.textContent = '徒歩ルートを取得できませんでした。公式情報と現地案内を確認してください。'; });
+      } else {
+        modalRouteStatus.textContent = translate('現在地を取得できないため徒歩ルートを表示できません。');
+      }
+      updateCrowding();
+    }
+
+    function closeModal() {
+      overlay.classList.remove('open');
+      selectedShelter = null;
+      modalRouteRequestId++;
+      if (detailLayers) detailLayers.clearLayers();
+    }
+
+    document.querySelectorAll('[data-shelter-id]').forEach(function(button) {
+      button.addEventListener('click', function() { openModal(button); });
+    });
+    document.getElementById('closeShelterModal').addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(event) { if (event.target === overlay) closeModal(); });
+    document.addEventListener('keydown', function(event) { if (event.key === 'Escape' && selectedShelter) closeModal(); });
+    document.getElementById('goButton').addEventListener('click', function() {
+      if (!selectedShelter) return;
+      const id = selectedShelter.dataset.shelterId;
+      addedCounts[id] = (Number(addedCounts[id]) || 0) + Number(goCount.value);
+      localStorage.setItem('bousai-shelter-go-counts', JSON.stringify(addedCounts));
+      updateCrowding();
+    });
+  });
+</script>
 {% endblock %}

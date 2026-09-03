@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "group_name": "別班",
+    "invite_code": "11",
+    "members": [
+      {
+        "name": "admin",
+        "status": "御所見小学校に避難済み"
+      },
+      {
+        "name": "masaki",
+        "status": "未確認"
+      }
+    ]
+  }
+]
