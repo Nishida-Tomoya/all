@@ -1,15 +1,15 @@
 [
   {
     "name": "浜田福祉館",
-    "address": "青森市青葉3-8-1",
-    "latitude": 40.5747963,
-    "longitude": 140.4949182,
+    "address": "青森市青葉3丁目",
+    "latitude": 40.8041577,
+    "longitude": 140.7526251,
     "capacity": 300,
     "pet_allowed": "yes",
     "barrier_free": "yes",
     "id": 2,
     "location_geocoded": true,
-    "location_query": "青森市青葉3-8-1",
+    "location_query": "青森市青葉3丁目",
     "crowd_status": 290,
     "current_evacuees": 290
   },
@@ -23,7 +23,9 @@
     "barrier_free": "yes",
     "id": 3,
     "location_geocoded": true,
-    "location_query": "青森市青柳2丁目"
+    "location_query": "青森市青柳2丁目",
+    "crowd_status": 129,
+    "current_evacuees": 129
   },
   {
     "name": "戸山中学校",

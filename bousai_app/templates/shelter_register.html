@@ -56,6 +56,16 @@
   </section>
 
   <section class="register-section">
+    <div class="register-heading"><h3>混雑状況登録</h3>{% if crowd_success %}<p class="form-message success">{{ crowd_success }}</p>{% endif %}{% if crowd_error %}<p class="form-message error">{{ crowd_error }}</p>{% endif %}</div>
+    <form class="register-form" method="post">
+      <input type="hidden" name="form_type" value="crowd">
+      <div class="field"><label for="crowd-shelter-name">避難所名</label><select id="crowd-shelter-name" name="crowd_shelter_name" required><option value="">選択してください</option>{% for shelter in shelters %}<option value="{{ shelter.name }}">{{ shelter.name }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="crowd-status">現在の避難者数</label><input id="crowd-status" type="number" name="crowd_status" min="0" step="1" required></div>
+      <button class="register-button" type="submit">登録</button>
+    </form>
+  </section>
+
+  <section class="register-section">
     <div class="register-heading"><h3>登録済み避難所一覧</h3></div>
     {% if shelters %}
       <ul class="shelter-list">
@@ -73,16 +83,6 @@
         {% endfor %}
       </ul>
     {% else %}<p class="empty-message">登録済みの避難所はありません。</p>{% endif %}
-  </section>
-
-  <section class="register-section">
-    <div class="register-heading"><h3>混雑状況登録</h3>{% if crowd_success %}<p class="form-message success">{{ crowd_success }}</p>{% endif %}{% if crowd_error %}<p class="form-message error">{{ crowd_error }}</p>{% endif %}</div>
-    <form class="register-form" method="post">
-      <input type="hidden" name="form_type" value="crowd">
-      <div class="field"><label for="crowd-shelter-name">避難所名</label><select id="crowd-shelter-name" name="crowd_shelter_name" required><option value="">選択してください</option>{% for shelter in shelters %}<option value="{{ shelter.name }}">{{ shelter.name }}</option>{% endfor %}</select></div>
-      <div class="field"><label for="crowd-status">現在の避難者数</label><input id="crowd-status" type="number" name="crowd_status" min="0" step="1" required></div>
-      <button class="register-button" type="submit">登録</button>
-    </form>
   </section>
 </div>
 {% endblock %}

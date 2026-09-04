@@ -192,46 +192,43 @@
     }
     shelters.forEach(function(button) { button.addEventListener('click', function() { selectShelter(button); }); });
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(function(position) {
-        currentPosition = position;
-        window.bousaiCurrentPosition = position;
-        locationMarker = L.marker([position.coords.latitude, position.coords.longitude], { icon: currentLocationIcon }).addTo(map).bindPopup('現在地');
-        map.setView([position.coords.latitude, position.coords.longitude], 13);
-        const candidates = shelters.filter(function(button) { return validCoordinates(button); });
-        if (!candidates.length) {
-          mapStatus.textContent = '現在地を表示しましたが、位置情報のある避難所がありません。';
-          return;
-        }
-        mapStatus.textContent = translate('現在地を表示しました。') + translate('おすすめ避難所を確認中...');
-        Promise.all(candidates.map(function(button) { return fetchRoute(button).then(function(route) { return { button: button, route: route }; }).catch(function() { return null; }); })).then(function(routeResults) {
-          const available = routeResults.filter(Boolean);
-          available.forEach(function(item) { setRouteMetric(item.button, item.route); });
-          candidates.forEach(function(button) {
-            if (!Number.isFinite(Number(button.dataset.routeDuration))) setRouteUnavailable(button);
-          });
-          sortSheltersByRoute();
-          const eligible = available.filter(function(item) { return !isNearlyFull(item.button); });
-          const recommended = eligible.length ? eligible.reduce(function(best, item) {
-            const capacity = Number(item.button.dataset.capacity);
-            const current = Number(item.button.dataset.currentEvacuees) || 0;
-            const occupancyRatio = capacity > 0 ? Math.min(current / capacity, 1) : 0.5;
-            const score = item.route.duration * (1 + occupancyRatio);
-            return score < best.score ? { button: item.button, route: item.route, score: score } : best;
-          }, { button: eligible[0].button, route: eligible[0].route, score: Infinity }) : null;
-          mapStatus.textContent = translate('現在地を表示しました。');
-          if (recommended) {
-            selectShelter(recommended.button, recommended.route);
-            recommended.button.classList.add('recommended');
-            mapStatus.textContent = 'おすすめ: ' + recommended.button.dataset.shelterName + '（距離と空き状況を考慮）';
-          } else if (available.length) {
-            mapStatus.textContent = '空きが十分なおすすめ避難所を見つけられませんでした。';
-          } else {
-            mapStatus.textContent = '徒歩ルートを取得できる避難所がありません。';
-          }
-        });
-      }, function(error) { mapStatus.textContent = error.code === 1 ? '位置情報の利用が拒否されました。' : '現在地を取得できませんでした。'; }, { enableHighAccuracy: true, timeout: 10000 });
-    } else mapStatus.textContent = 'このブラウザは位置情報に対応していません。';
+    const fixedCurrentPosition = { coords: { latitude: 40.8244, longitude: 140.7400 } };
+    currentPosition = fixedCurrentPosition;
+    window.bousaiCurrentPosition = fixedCurrentPosition;
+    locationMarker = L.marker([fixedCurrentPosition.coords.latitude, fixedCurrentPosition.coords.longitude], { icon: currentLocationIcon }).addTo(map).bindPopup('現在地（青森市の仮設定）');
+    map.setView([fixedCurrentPosition.coords.latitude, fixedCurrentPosition.coords.longitude], 13);
+    const candidates = shelters.filter(function(button) { return validCoordinates(button); });
+    if (!candidates.length) {
+      mapStatus.textContent = '現在地を表示しましたが、位置情報のある避難所がありません。';
+      return;
+    }
+    mapStatus.textContent = '青森市の仮の現在地からおすすめ避難所を確認中...';
+    Promise.all(candidates.map(function(button) { return fetchRoute(button).then(function(route) { return { button: button, route: route }; }).catch(function() { return null; }); })).then(function(routeResults) {
+      const available = routeResults.filter(Boolean);
+      available.forEach(function(item) { setRouteMetric(item.button, item.route); });
+      candidates.forEach(function(button) {
+        if (!Number.isFinite(Number(button.dataset.routeDuration))) setRouteUnavailable(button);
+      });
+      sortSheltersByRoute();
+      const eligible = available.filter(function(item) { return !isNearlyFull(item.button); });
+      const recommended = eligible.length ? eligible.reduce(function(best, item) {
+        const capacity = Number(item.button.dataset.capacity);
+        const current = Number(item.button.dataset.currentEvacuees) || 0;
+        const occupancyRatio = capacity > 0 ? Math.min(current / capacity, 1) : 0.5;
+        const score = item.route.duration * (1 + occupancyRatio);
+        return score < best.score ? { button: item.button, route: item.route, score: score } : best;
+      }, { button: eligible[0].button, route: eligible[0].route, score: Infinity }) : null;
+      mapStatus.textContent = '青森市の仮の現在地を表示しました。';
+      if (recommended) {
+        selectShelter(recommended.button, recommended.route);
+        recommended.button.classList.add('recommended');
+        mapStatus.textContent = 'おすすめ: ' + recommended.button.dataset.shelterName + '（距離と空き状況を考慮）';
+      } else if (available.length) {
+        mapStatus.textContent = '空きが十分なおすすめ避難所を見つけられませんでした。';
+      } else {
+        mapStatus.textContent = '徒歩ルートを取得できる避難所がありません。';
+      }
+    });
   });
 </script>
 
@@ -316,7 +313,7 @@
       modalPetAllowed.textContent = button.dataset.petAllowed === 'yes' ? '対応可' : button.dataset.petAllowed === 'no' ? '対応不可' : '未登録';
       const latitude = Number(button.dataset.latitude);
       const longitude = Number(button.dataset.longitude);
-      googleMapLink.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(button.dataset.address);
+      googleMapLink.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(button.dataset.shelterName);
       overlay.classList.add('open');
       if (!detailMap) {
         const initialPoint = Number.isFinite(latitude) && Number.isFinite(longitude) ? [latitude, longitude] : [40.8244, 140.7400];
